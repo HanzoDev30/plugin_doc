@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ghost IDE Plugin Docs</title>
+<meta name="description" content="Developer documentation for building plugins for Ghost IDE — extension points, services, LSP integration, UI screens and the .gpl package format.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" type="image/png" href="assets/img/icon-192.png">
+<link rel="apple-touch-icon" href="assets/img/icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body dir="rtl">
+<a href="#mainContent" class="skip-link">رفتن به محتوا</a>
+
+<header class="topbar">
+  <button type="button" class="topbar__menu" id="topbarMenu" aria-label="menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+  </button>
+
+  <a class="brand" href="#/">
+    <span class="brand__mark"><img src="assets/img/icon-192.png" alt="Ghost IDE"></span>
+    <span class="brand__name"><b>Ghost IDE</b><small>Plugin Docs</small></span>
+  </a>
+
+  <div class="topbar__search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><line x1="20" y1="20" x2="15.8" y2="15.8"/></svg>
+    <input type="text" id="searchInput" autocomplete="off" spellcheck="false">
+    <div class="search-results" id="searchResults"></div>
+  </div>
+
+  <div class="topbar__actions">
+    <div class="langswitch">
+      <button type="button" id="langFa">FA</button>
+      <button type="button" id="langEn">EN</button>
+    </div>
+    <a class="icon-btn" id="githubLink" href="https://github.com/hanzodev1375" target="_blank" rel="noopener" aria-label="GitHub">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/><path d="M14 4h6v6"/><path d="M20 4 10.5 13.5"/></svg>
+    </a>
+  </div>
+</header>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="shell">
+  <nav class="sidebar" id="sidebar" aria-label="Documentation navigation">
+    <div id="sidebarNav"></div>
+    <div class="sidebar__foot">
+      <div class="sidebar__version" id="sidebarVersion"></div>
+    </div>
+  </nav>
+
+  <main class="content" id="mainContent"></main>
+</div>
+
+<footer class="sitefoot">
+  Ghost IDE Plugin Docs — <a href="https://github.com/hanzodev1375" target="_blank" rel="noopener">GitHub</a>
+</footer>
+
+<script src="assets/js/nav.js"></script>
+<script src="assets/js/content.fa.js"></script>
+<script src="assets/js/content.en.js"></script>
+<script>var CONTENT = { fa: CONTENT_FA, en: CONTENT_EN };</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-groovy.min.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
