@@ -43,6 +43,7 @@ var CONTENT_FA = {
             'ui-feedback-host': 'UiFeedbackHost',
             'ide-events': 'IdeEvents / FileEvent',
             'plugin-screen': 'PluginScreen',
+            'file-icon-contributor': 'FileIconContributor',
             'gpl-format': 'فرمت .gpl',
             'build-plugin': 'ساخت پلاگین',
             'loading-lifecycle': 'چرخه‌ی بارگذاری',
@@ -1223,6 +1224,75 @@ ui.promptInput("اسم پروژه", "my-app", name -> {
           "ir.hanzodev1375.ghostide.ui.editorActionHandler", EditorActionHandler.class);
 }` },
                 { type: 'p', text: 'برای یک پیاده‌سازی کامل — شامل خودِ Fragment — به [نمونه‌ی Hello Ghost](#/example/hello-world) نگاه کن.' }
+            ]
+        },
+
+        'file-icon-contributor': {
+            title: 'FileIconContributor',
+            filename: 'FileIconContributor.java',
+            module: 'ide-ui-api',
+            dek: 'آیکون فایل/پوشه‌ی داخلی را برای مسیرهایی که پلاگین تشخیص می‌دهد override می‌کند — از جمله کل آیکون‌پک‌ها.',
+            blocks: [
+                { type: 'p', text: 'یک `FileIconContributor` را در `PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR` ثبت کن. برای هر آیکونی که در فایل منیجر، تب‌های ادیتور، تاریخچه و بوکمارک‌ها نمایش داده می‌شود، **قبل از** مجموعه‌ی داخلی `file_icons.json` از او پرسیده می‌شود. برای مسیرهایی که هندل نمی‌کنی `null` برگردان تا contributor بعدی — یا مجموعه‌ی داخلی — جواب بدهد.' },
+                {
+                    type: 'code', filename: 'FileIconContributor.java', lang: 'java', code:
+                        `public interface FileIconContributor {
+
+  String getIcon(String filePath);
+}` },
+                {
+                    type: 'table', headers: ['مقدار بازگشتی', 'معنی'], rows: [
+                        ['`file://...`, `content://...`', 'یک URI کامل. برای آرت‌ورکی که داخل `.gpl` خودت داری؛ موقع `activate()` آن را به حافظه‌ی خصوصی کپی کن چون Glide نمی‌تواند asset پلاگین را از طریق `android_asset` باز کند.'],
+                        ['`file_type_kotlin`', 'یک نام آیکون ساده؛ به‌صورت `vscode_icons/<name>.svg` در assetهای میزبان حل می‌شود.'],
+                        ['`null` / خالی', 'این مسیر را هندل نمی‌کنی — به contributor بعدی و سپس مجموعه‌ی داخلی می‌رسد.']
+                    ]
+                },
+                { type: 'h2', text: 'JsonFileIconContributor' },
+                { type: 'p', text: 'برای مپ کردن گروهی، یک فایل JSON داخل assetهای پلاگین بگذار و `JsonFileIconContributor` آماده را ثبت کن. این JSON **جزئی** است: فقط بخشی را که می‌خواهی override کنی بنویس و بقیه fallback می‌شود. کلید پسوند را می‌توان `hsi` یا `.hsi` یا `*.hsi` نوشت — هر سه یکی‌اند.' },
+                {
+                    type: 'code', filename: 'assets/myicons.json', lang: 'json', code:
+                        `{
+  "asset_dir": "myicons",
+  "extensions": {
+    "hsi": "file_type_hsi",
+    "ghost": "file_type_ghost"
+  },
+  "filenames": {
+    "makefile": "file_type_makefile",
+    "ghostide.json": "file_type_ghost"
+  },
+  "folders": {
+    "components": "folder_type_components",
+    "node_modules": "folder_type_node"
+  },
+  "defaults": {
+    "file": "default_file",
+    "folder": "default_folder",
+    "root_folder": "default_root_folder"
+  }
+}` },
+                { type: 'p', text: 'معادل VS Code هم قبول است: `fileExtensions` \u2192 `extensions`، `fileNames` \u2192 `filenames`، `folderNames` / `folderNamesExpanded` \u2192 `folders`. یک پک مینیمال چیزی جز مپ لازم ندارد:' },
+                {
+                    type: 'code', filename: 'assets/myicons.json', lang: 'json', code:
+                        `{
+  "extensions": {
+    "hsi": "iconhsi"
+  }
+}` },
+                {
+                    type: 'code', filename: 'MyPlugin.java', lang: 'java', code:
+                        `public void activate(PluginContext context) {
+  Context pluginContext =
+      context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+  context.registerDisposable(
+      context.getExtensions().register(
+          PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR,
+          new JsonFileIconContributor(pluginContext, "myicons.json")));
+}` },
+                { type: 'p', text: '`asset_dir` اختیاری است؛ نام‌هایی که به یک SVG داخلش اشاره کنند یک بار به حافظه‌ی خصوصی پلاگین استخراج و به‌صورت `file://` سرو می‌شوند، و نام‌های ناشناخته به مجموعه‌ی داخلی `vscode_icons` می‌رسند. `defaults` از `file`، `folder` و `root_folder` پشتیبانی می‌کند.' },
+                { type: 'h2', text: 'اولویت بین آیکون‌پک‌ها' },
+                { type: 'p', text: 'چند افزونه‌ی آیکون می‌توانند هم‌زمان فعال باشند. **جدیدترین پکی که نصب شده** اول پرسیده می‌شود — اولویتش از زمان نصب فایل `.gpl` گرفته می‌شود و بعد از ری‌استارت هم حفظ می‌شود. اولین جواب non-null برای هر مسیر برنده است، پس پک جدید روی کلیدهایی که تعریف می‌کند پک‌های قدیمی‌تر را override می‌کند و بقیه‌جاها به آن‌ها و در نهایت به مجموعه‌ی داخلی fallback می‌کند. با unload شدن پلاگین، contributionهایش خودکار حذف می‌شوند.' },
+                { type: 'note', variant: 'tip', text: 'برای استفاده از آرت‌ورک داخلی، یک مپ را به هر نام آیکون موجود اشاره بده (مثلاً `file_type_kotlin`). SVGهای خودت را فقط برای آیکون‌هایی که در مجموعه‌ی داخلی نیستند زیر `asset_dir` بگذار.' }
             ]
         },
 

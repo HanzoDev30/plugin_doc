@@ -43,6 +43,7 @@ var CONTENT_EN = {
       'ui-feedback-host': 'UiFeedbackHost',
       'ide-events': 'IdeEvents / FileEvent',
       'plugin-screen': 'PluginScreen',
+      'file-icon-contributor': 'FileIconContributor',
       'gpl-format': '.gpl Format',
       'build-plugin': 'Building a Plugin',
       'loading-lifecycle': 'Loading Lifecycle',
@@ -1135,6 +1136,69 @@ ui.promptInput("Project name", "my-app", name -> {
           "ir.hanzodev1375.ghostide.ui.editorActionHandler", EditorActionHandler.class);
 }` },
         { type: 'p', text: 'For a complete implementation \u2014 including the Fragment itself \u2014 see the [Hello Ghost example](#/example/hello-world).' }
+      ]
+    },
+
+    'file-icon-contributor': {
+      title: 'FileIconContributor',
+      filename: 'FileIconContributor.java',
+      module: 'ide-ui-api',
+      dek: 'Overrides the built-in file/folder icons for the paths a plugin decides \u2014 including whole icon packs.',
+      blocks: [
+        { type: 'p', text: 'Register a `FileIconContributor` at `PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR`. It is consulted for every icon shown in the file manager, editor tabs, history and bookmarks, **before** the built-in `file_icons.json` set. Return `null` for paths you do not handle so the next contributor \u2014 or the built-in set \u2014 takes over.' },
+        { type: 'code', filename: 'FileIconContributor.java', lang: 'java', code:
+`public interface FileIconContributor {
+
+  String getIcon(String filePath);
+}` },
+        { type: 'table', headers: ['Return value', 'Meaning'], rows: [
+          ['`file://...`, `content://...`', 'A full URI. Use it for artwork shipped inside your `.gpl`; extract it to private storage during `activate()` because Glide cannot open plugin assets through `android_asset`.'],
+          ['`file_type_kotlin`', 'A bare icon name; resolved as `vscode_icons/<name>.svg` inside the host assets.'],
+          ['`null` / blank', 'You do not handle this path \u2014 fall through to the next contributor, then the built-in set.']
+        ] },
+        { type: 'h2', text: 'JsonFileIconContributor' },
+        { type: 'p', text: 'For bulk mappings, ship a JSON file in your plugin assets and register the ready-made `JsonFileIconContributor`. The JSON is **partial**: declare only the sections you want to override, and everything else falls through. Extension keys may be written as `hsi`, `.hsi` or `*.hsi` \u2014 all three are equivalent.' },
+        { type: 'code', filename: 'assets/myicons.json', lang: 'json', code:
+`{
+  "asset_dir": "myicons",
+  "extensions": {
+    "hsi": "file_type_hsi",
+    "ghost": "file_type_ghost"
+  },
+  "filenames": {
+    "makefile": "file_type_makefile",
+    "ghostide.json": "file_type_ghost"
+  },
+  "folders": {
+    "components": "folder_type_components",
+    "node_modules": "folder_type_node"
+  },
+  "defaults": {
+    "file": "default_file",
+    "folder": "default_folder",
+    "root_folder": "default_root_folder"
+  }
+}` },
+        { type: 'p', text: 'The VS Code spelling of the section names is accepted too: `fileExtensions` \u2192 `extensions`, `fileNames` \u2192 `filenames`, `folderNames` / `folderNamesExpanded` \u2192 `folders`. A minimal pack needs nothing but the mapping:' },
+        { type: 'code', filename: 'assets/myicons.json', lang: 'json', code:
+`{
+  "extensions": {
+    "hsi": "iconhsi"
+  }
+}` },
+        { type: 'code', filename: 'MyPlugin.java', lang: 'java', code:
+`public void activate(PluginContext context) {
+  Context pluginContext =
+      context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+  context.registerDisposable(
+      context.getExtensions().register(
+          PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR,
+          new JsonFileIconContributor(pluginContext, "myicons.json")));
+}` },
+        { type: 'p', text: '`asset_dir` is optional; names that point at an SVG inside it are extracted once into the plugin\u2019s private storage and served as `file://` URIs, while unknown names fall back to the built-in `vscode_icons` set. `defaults` supports `file`, `folder` and `root_folder`.' },
+        { type: 'h2', text: 'Priority between icon packs' },
+        { type: 'p', text: 'Several icon plugins can be active at once. The **newest installed** plugin is queried first \u2014 its priority is derived from the `.gpl` install time and survives restarts. The first non-null answer wins per path, so a newer pack overrides older packs on the keys it declares and falls back to them \u2014 and finally to the built-in set \u2014 everywhere else. Unloading a plugin removes its contributions automatically.' },
+        { type: 'note', variant: 'tip', text: 'To reuse the built-in artwork, point a mapping at any existing icon name (for example `file_type_kotlin`). Ship your own SVGs under `asset_dir` only for icons the built-in set does not have.' }
       ]
     },
 
