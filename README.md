@@ -12,10 +12,30 @@ assets/js/nav.js            ساختار سایدبار (مستقل از زبا�
 assets/js/content.fa.js     محتوای فارسی
 assets/js/content.en.js     محتوای انگلیسی
 assets/js/app.js            روتر + رندر + سرچ + سوییچ زبان
+tools/gen-llms.js           مولد فایل‌های llms (برای دسترسی سریع AI)
+llms.txt                    ایندکس فهرست برای AI/webfetch
+llms-full.fa.txt            همه‌ی مستندات فارسی در یک فایل متنی
+llms-full.en.txt            همه‌ی مستندات انگلیسی در یک فایل متنی
 .github/workflows/deploy.yml   دیپلوی خودکار روی GitHub Pages
 ```
 
 هیچ مرحله‌ی build ای در کار نیست؛ فایل‌ها همان‌طور که هستند سرو می‌شوند.
+
+## دسترسی سریع AI / webfetch
+
+سایت یک SPA سمت-کلاینت است؛ `webfetch` (یا هر crawler بدون JS) روی `index.html`
+فقط پوسته را می‌بیند. برای اینکه AI و خود opencode داکیومنت را **در یک fetch** کامل
+بخواند، سه فایل متنی ساده در ریشه سرو می‌شود:
+
+- `llms.txt` — ایندکس کوتاه: یک webfetch بزن و لینک فایل کامل را بگیر.
+- `llms-full.fa.txt` — کل مستندات فارسی.
+- `llms-full.en.txt` — کل مستندات انگلیسی.
+
+بعد از هر تغییر در `content.*.js` یا `nav.js`، یک‌بار این را اجرا کن تا فایل‌ها بازتولید شوند:
+
+```bash
+node tools/gen-llms.js
+```
 
 ## دیپلوی روی GitHub Pages
 
