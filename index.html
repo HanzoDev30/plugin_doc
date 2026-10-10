@@ -65,7 +65,25 @@
 <script src="assets/js/nav.js"></script>
 <script src="assets/js/content.fa.js"></script>
 <script src="assets/js/content.en.js"></script>
-<script>var CONTENT = { fa: CONTENT_FA, en: CONTENT_EN };</script>
+<script src="assets/js/samples.fa.js"></script>
+<script src="assets/js/samples.en.js"></script>
+<script>
+  var CONTENT = { fa: CONTENT_FA, en: CONTENT_EN };
+  (function () {
+    function merge(content, samples) {
+      if (!content || !samples) return;
+      content.nav.groups.samples = samples.groupLabel;
+      Object.keys(samples.titles).forEach(function (slug) {
+        content.nav.pages[slug] = samples.titles[slug];
+      });
+      Object.keys(samples.pages).forEach(function (slug) {
+        content.pages[slug] = samples.pages[slug];
+      });
+    }
+    merge(CONTENT_FA, window.SAMPLES_FA);
+    merge(CONTENT_EN, window.SAMPLES_EN);
+  })();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>

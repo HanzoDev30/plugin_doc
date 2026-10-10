@@ -39,6 +39,7 @@ var CONTENT_EN = {
       'file-manager-host': 'FileManagerHost',
       'code-runner-host': 'CodeRunnerHost',
       'editor-panel': 'EditorPanel',
+      'file-panel': 'FilePanel',
       'editor-action-handler': 'EditorActionHandler',
       'ui-feedback-host': 'UiFeedbackHost',
       'ide-events': 'IdeEvents / FileEvent',
@@ -124,7 +125,7 @@ var CONTENT_EN = {
         { type: 'modulemap', items: [
           { name: 'plugin-api', desc: 'The plugin model itself: PluginContext, ExtensionPoint/Registry, ServiceKey/Registry, GlobalRegistry.' },
           { name: 'ide-api', desc: 'Depends on plugin-api. The LSP_SERVER_PROVIDER extension point for adding a language server.' },
-          { name: 'ide-ui-api', desc: 'Depends on plugin-api. The PLUGIN_SCREEN / EDITOR_PANEL / EDITOR_ACTION_HANDLER extension points plus the EditorHost, FileManagerHost and CodeRunnerHost services.' }
+          { name: 'ide-ui-api', desc: 'Depends on plugin-api. The PLUGIN_SCREEN / EDITOR_PANEL / FILE_PANEL / EDITOR_ACTION_HANDLER extension points plus the EditorHost, FileManagerHost and CodeRunnerHost services.' }
         ] },
         { type: 'p', text: 'The `:app` module (the app itself) depends on all three, and is the only place where the real registry implementations (`DefaultExtensionRegistry`, `DefaultServiceRegistry`) and the plugin loader (`GplPluginLoader`) actually live. Plugin code never talks to `:app`\u2019s internal classes directly \u2014 only to the `plugin-api`/`ide-api`/`ide-ui-api` interfaces.' },
         { type: 'h2', text: 'Two shared registries' },
@@ -424,11 +425,12 @@ storage.putString("lastPath", "/sdcard/Project/main.py");` },
       module: 'plugin-api',
       dek: 'The contract a group of registered capabilities must implement.',
       blocks: [
-        { type: 'p', text: 'A simple `record` holding a unique id and the `Class` type every registration must implement. The platform ships with seven extension points today:' },
+        { type: 'p', text: 'A simple `record` holding a unique id and the `Class` type every registration must implement. The platform ships with eight extension points today:' },
         { type: 'table', headers: ['Extension point', 'Type', 'Module'], rows: [
           ['`EditorExtensionPoints.LSP_SERVER_PROVIDER`', '`LspServerProvider`', '`ide-api`'],
           ['`PluginUiExtensionPoints.PLUGIN_SCREEN`', '`PluginScreen`', '`ide-ui-api`'],
           ['`PluginUiExtensionPoints.EDITOR_PANEL`', '`EditorPanel`', '`ide-ui-api`'],
+          ['`PluginUiExtensionPoints.FILE_PANEL`', '`FilePanel`', '`ide-ui-api`'],
           ['`PluginUiExtensionPoints.EDITOR_ACTION_HANDLER`', '`EditorActionHandler`', '`ide-ui-api`'],
           ['`PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR`', '`FileIconContributor`', '`ide-ui-api`'],
           ['`IdeEvents.FILE_EVENT`', '`FileEventListener`', '`ide-ui-api`'],
@@ -446,7 +448,7 @@ storage.putString("lastPath", "/sdcard/Project/main.py");` },
     }
   }
 }` },
-        { type: 'p', text: 'For details on each, see [LspServerProvider](#/lsp/lsp-server-provider), [PluginScreen](#/ui/plugin-screen), [EditorPanel](#/ui/editor-panel) or [EditorActionHandler](#/ui/editor-action-handler).' }
+        { type: 'p', text: 'For details on each, see [LspServerProvider](#/lsp/lsp-server-provider), [PluginScreen](#/ui/plugin-screen), [EditorPanel](#/ui/editor-panel), [FilePanel](#/ui/file-panel) or [EditorActionHandler](#/ui/editor-action-handler).' }
       ]
     },
 
@@ -785,7 +787,7 @@ public interface LspServerConnectionFactory {
       blocks: [
         { type: 'p', text: '`ide-ui-api` is an Android library (namespace: `ir.hanzodev1375.ghostide.ide.ui.api`, `minSdk 26`, `compileSdk 36`) that builds on `plugin-api` and `androidx.appcompat`.' },
         { type: 'note', variant: 'info', text: 'Android doesn\u2019t let dynamically loaded code declare a new `<activity>` in the host\u2019s manifest. That\u2019s why a plugin\u2019s \u201cscreen\u201d is actually a `Fragment`, not an Activity \u2014 the same technique Android plugin frameworks commonly use. The host app has a single screen-hosting Activity that displays this Fragment.' },
-        { type: 'p', text: 'To add a screen, see the [PluginScreen](#/ui/plugin-screen) interface. To slide a panel inside the running editor, see [EditorPanel](#/ui/editor-panel). To reach the open editor or file manager, see [EditorHost](#/ui/editor-host) and [FileManagerHost](#/ui/file-manager-host). To run code or a shell command, see [CodeRunnerHost](#/ui/code-runner-host). To intercept your language server\u2019s commands locally, see [EditorActionHandler](#/ui/editor-action-handler).' }
+        { type: 'p', text: 'To add a screen, see the [PluginScreen](#/ui/plugin-screen) interface. To slide a panel inside the running editor, see [EditorPanel](#/ui/editor-panel); to slide one inside the file manager, see [FilePanel](#/ui/file-panel). To reach the open editor or file manager, see [EditorHost](#/ui/editor-host) and [FileManagerHost](#/ui/file-manager-host). To run code or a shell command, see [CodeRunnerHost](#/ui/code-runner-host). To intercept your language server\u2019s commands locally, see [EditorActionHandler](#/ui/editor-action-handler).' }
       ]
     },
 
@@ -984,6 +986,44 @@ View view = LayoutInflater.from(pluginContext)
         { type: 'h2', text: 'getLastPath()' },
         { type: 'p', text: 'Returns the path your panel is currently about \u2014 for example a file the panel\u2019s user picked. The host consults every panel\u2019s `getLastPath()` when running the current file (`CodeRunnerHost.runCurrentFile()`); if you return `null`, the host falls back to the file open in the editor.' },
         { type: 'note', variant: 'tip', text: 'To show a panel with a different window style, override `getState()` / call `setState(PluginStateMod)` \u2014 side sheet, dialog, bottom sheet and more are all supported.' }
+      ]
+    },
+
+    'file-panel': {
+      title: 'FilePanel',
+      filename: 'FilePanel.java',
+      module: 'ide-ui-api',
+      dek: 'A UI panel a plugin slides into the running file manager \u2014 the exact counterpart of EditorPanel.',
+      blocks: [
+        { type: 'p', text: 'Register an implementation at `PluginUiExtensionPoints.FILE_PANEL`. Same lifecycle and display modes as [EditorPanel](#/ui/editor-panel), but the host screen is the **file manager**. This lets a plugin (git clone, archives, sync, ...) show its UI without leaving the file list.' },
+        { type: 'code', filename: 'FilePanel.java', lang: 'java', code:
+`public interface FilePanel extends Panel {
+
+  String getId();
+
+  String getTitle();
+
+  View createView();
+
+  // Optional: which path this panel is about
+  default String getLastPath() {
+    return null;
+  }
+}` },
+        { type: 'p', text: 'The host creates the panel\u2019s `View` once when it is first shown and keeps it for the rest of the Activity\u2019s lifetime, so build your view lazily and keep its state inside it. Inflate layouts with the plugin\u2019s own scoped context, exactly as with `EditorPanel`:' },
+        { type: 'code', filename: 'MyFilePanel.java', lang: 'java', code:
+`Context pluginContext = context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+View view = LayoutInflater.from(pluginContext)
+    .cloneInContext(pluginContext)
+    .inflate(R.layout.my_panel, root, false);` },
+        { type: 'code', filename: 'MyPlugin.java', lang: 'java', code:
+`context.getExtensions().register(
+    PluginUiExtensionPoints.FILE_PANEL,
+    new MyFilePanel(),
+    context.getDescriptor().getId(),
+    0);` },
+        { type: 'note', variant: 'tip', text: 'Both `EditorPanel` and `FilePanel` extend a shared `Panel` interface, so they reuse the exact same hosting logic. To show the panel with a window style other than the default side sheet, override `getState()` / call `setState(PluginStateMod)` \u2014 e.g. `BOTTOMSHEETDIALOG`.' },
+        { type: 'note', variant: 'info', text: 'The plugin popup opened from the file manager shows `FILE_PANEL` contributions as bottom sheets inside the file manager; the same popup opened from the editor shows `EDITOR_PANEL` contributions inside the editor.' }
       ]
     },
 

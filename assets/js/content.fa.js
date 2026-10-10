@@ -39,6 +39,7 @@ var CONTENT_FA = {
             'file-manager-host': 'FileManagerHost',
             'code-runner-host': 'CodeRunnerHost',
             'editor-panel': 'EditorPanel',
+            'file-panel': 'FilePanel',
             'editor-action-handler': 'EditorActionHandler',
             'ui-feedback-host': 'UiFeedbackHost',
             'ide-events': 'IdeEvents / FileEvent',
@@ -130,7 +131,7 @@ var CONTENT_FA = {
                     type: 'modulemap', items: [
                         { name: 'plugin-api', desc: 'مدل پلاگین، PluginContext، ExtensionPoint/Registry، ServiceKey/Registry، GlobalRegistry.' },
                         { name: 'ide-api', desc: 'وابسته به plugin-api. اکستنشن‌پوینت LSP_SERVER_PROVIDER برای افزودن Language Server.' },
-                        { name: 'ide-ui-api', desc: 'وابسته به plugin-api. اکستنشن‌پوینت‌های PLUGIN_SCREEN / EDITOR_PANEL / EDITOR_ACTION_HANDLER و سرویس‌های EditorHost / FileManagerHost / CodeRunnerHost.' }
+                        { name: 'ide-ui-api', desc: 'وابسته به plugin-api. اکستنشن‌پوینت‌های PLUGIN_SCREEN / EDITOR_PANEL / FILE_PANEL / EDITOR_ACTION_HANDLER و سرویس‌های EditorHost / FileManagerHost / CodeRunnerHost.' }
                     ]
                 },
                 { type: 'p', text: 'ماژول `:app` (خود اپ) به هر سه بستگی دارد و در واقع تنها جایی است که پیاده‌سازی واقعی رجیستری‌ها (`DefaultExtensionRegistry`, `DefaultServiceRegistry`) و بارگذار پلاگین (`GplPluginLoader`) در آن زندگی می‌کند. کد پلاگین هرگز مستقیم با کلاس‌های داخلی `:app` صحبت نمی‌کند — فقط با رابط‌های `plugin-api`/`ide-api`/`ide-ui-api`.' },
@@ -460,12 +461,13 @@ storage.putString("lastPath", "/sdcard/Project/main.py");` },
             module: 'plugin-api',
             dek: 'قراردادی که یک گروه از قابلیت‌های ثبت‌شده باید پیاده کنند.',
             blocks: [
-                { type: 'p', text: 'یک `record` ساده شامل شناسه‌ی یکتا و نوع (`Class`) قراردادی که هر ثبت‌کننده باید پیاده کند. خود این پلتفرم فعلاً هفت اکستنشن‌پوینت آماده دارد:' },
+                { type: 'p', text: 'یک `record` ساده شامل شناسه‌ی یکتا و نوع (`Class`) قراردادی که هر ثبت‌کننده باید پیاده کند. خود این پلتفرم فعلاً هشت اکستنشن‌پوینت آماده دارد:' },
                 {
                     type: 'table', headers: ['اکستنشن‌پوینت', 'نوع', 'ماژول'], rows: [
                         ['`EditorExtensionPoints.LSP_SERVER_PROVIDER`', '`LspServerProvider`', '`ide-api`'],
                         ['`PluginUiExtensionPoints.PLUGIN_SCREEN`', '`PluginScreen`', '`ide-ui-api`'],
                         ['`PluginUiExtensionPoints.EDITOR_PANEL`', '`EditorPanel`', '`ide-ui-api`'],
+                        ['`PluginUiExtensionPoints.FILE_PANEL`', '`FilePanel`', '`ide-ui-api`'],
                         ['`PluginUiExtensionPoints.EDITOR_ACTION_HANDLER`', '`EditorActionHandler`', '`ide-ui-api`'],
                         ['`PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR`', '`FileIconContributor`', '`ide-ui-api`'],
                         ['`IdeEvents.FILE_EVENT`', '`FileEventListener`', '`ide-ui-api`'],
@@ -485,7 +487,7 @@ storage.putString("lastPath", "/sdcard/Project/main.py");` },
     }
   }
 }` },
-                { type: 'p', text: 'برای جزئیات هر کدام، صفحه‌ی [LspServerProvider](#/lsp/lsp-server-provider)، [PluginScreen](#/ui/plugin-screen)، [EditorPanel](#/ui/editor-panel) یا [EditorActionHandler](#/ui/editor-action-handler) را ببین.' }
+                { type: 'p', text: 'برای جزئیات هر کدام، صفحه‌ی [LspServerProvider](#/lsp/lsp-server-provider)، [PluginScreen](#/ui/plugin-screen)، [EditorPanel](#/ui/editor-panel)، [FilePanel](#/ui/file-panel) یا [EditorActionHandler](#/ui/editor-action-handler) را ببین.' }
             ]
         },
 
@@ -848,7 +850,7 @@ public interface LspServerConnectionFactory {
             blocks: [
                 { type: 'p', text: '`ide-ui-api` یک کتابخانه‌ی اندرویدی است (namespace: `ir.hanzodev1375.ghostide.ide.ui.api`، `minSdk 26`، `compileSdk 36`) که روی `plugin-api` و `androidx.appcompat` سوار می‌شود.' },
                 { type: 'note', variant: 'info', text: 'اندروید اجازه نمی‌دهد کد بارگذاری‌شده در زمان اجرا یک `<activity>` تازه در مانیفست میزبان اعلام کند. به همین دلیل "صفحه" یک پلاگین در واقع یک `Fragment` است، نه یک Activity — همان تکنیکی که چارچوب‌های پلاگین اندرویدی معمولاً استفاده می‌کنند. اپ میزبان یک اکتیویتی میزبان‌کننده‌ی صفحه دارد که این Fragment را نمایش می‌دهد.' },
-                { type: 'p', text: 'برای افزودن یک صفحه، رابط [PluginScreen](#/ui/plugin-screen) را ببین. برای بازکردن پنل داخل ادیتورِ در حال اجرا، [EditorPanel](#/ui/editor-panel) را ببین. برای دسترسی به ادیتور یا فایل‌منیجر باز، رابط‌های [EditorHost](#/ui/editor-host) و [FileManagerHost](#/ui/file-manager-host) را ببین. برای اجرای کد یا دستور شل، [CodeRunnerHost](#/ui/code-runner-host) را ببین. برای هندل محلی دستورهای سرور زبان، [EditorActionHandler](#/ui/editor-action-handler) را ببین.' }
+                { type: 'p', text: 'برای افزودن یک صفحه، رابط [PluginScreen](#/ui/plugin-screen) را ببین. برای بازکردن پنل داخل ادیتورِ در حال اجرا، [EditorPanel](#/ui/editor-panel) را ببین؛ برای بازکردن پنل داخل فایل‌منیجر، [FilePanel](#/ui/file-panel) را ببین. برای دسترسی به ادیتور یا فایل‌منیجر باز، رابط‌های [EditorHost](#/ui/editor-host) و [FileManagerHost](#/ui/file-manager-host) را ببین. برای اجرای کد یا دستور شل، [CodeRunnerHost](#/ui/code-runner-host) را ببین. برای هندل محلی دستورهای سرور زبان، [EditorActionHandler](#/ui/editor-action-handler) را ببین.' }
             ]
         },
 
@@ -1060,6 +1062,47 @@ View view = LayoutInflater.from(pluginContext)
                 { type: 'h2', text: 'getLastPath()' },
                 { type: 'p', text: 'مسیری را برمی‌گرداند که پنل در حال حاضر درباره‌ی آن است — مثلاً فایلی که کاربر پنل انتخاب کرده. میزبان هنگام اجرای فایل جاری (`CodeRunnerHost.runCurrentFile()`) به `getLastPath()` همه‌ی پنل‌ها نگاه می‌کند؛ اگر `null` برگردانی، به فایل بازِ ادیتور سقوط می‌کند.' },
                 { type: 'note', variant: 'tip', text: 'برای نمایش پنل با نوع پنجره‌ی متفاوت، `getState()` را override کن یا `setState(PluginStateMod)` صدا بزن — side sheet، dialog، bottom sheet و بقیه همگی پشتیبانی می‌شوند.' }
+            ]
+        },
+
+        'file-panel': {
+            title: 'FilePanel',
+            filename: 'FilePanel.java',
+            module: 'ide-ui-api',
+            dek: 'یک پنل UI که پلاگین داخل صفحه‌ی بازِ فایل‌منیجر باز می‌کند — دقیقاً قرینه‌ی EditorPanel.',
+            blocks: [
+                { type: 'p', text: 'یک پیاده‌سازی را در `PluginUiExtensionPoints.FILE_PANEL` ثبت کن. چرخه‌ی عمر و حالت‌های نمایشش دقیقاً مثل [EditorPanel](#/ui/editor-panel) است، با این تفاوت که صفحه‌ی میزبان **فایل‌منیجر** است. این باعث می‌شود پلاگین (git clone، آرشیو، sync و ...) بدون ترک لیست فایل‌ها UI خودش را نشان دهد.' },
+                {
+                    type: 'code', filename: 'FilePanel.java', lang: 'java', code:
+                        `public interface FilePanel extends Panel {
+
+  String getId();
+
+  String getTitle();
+
+  View createView();
+
+  // اختیاری: این پنل به چه مسیری اشاره دارد
+  default String getLastPath() {
+    return null;
+  }
+}` },
+                { type: 'p', text: 'میزبان فقط یک‌بار، وقتی پنل اولین بار نمایش داده می‌شود، `View` آن را می‌سازد و تا پایان عمر اکتیویتی نگهش می‌دارد؛ پس view را تنبل (lazy) بساز و حالتش را داخل خودش نگه دار. برای inflate هم مثل `EditorPanel` باید از Context مخصوص خودِ پلاگین استفاده کنی:' },
+                {
+                    type: 'code', filename: 'MyFilePanel.java', lang: 'java', code:
+                        `Context pluginContext = context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+View view = LayoutInflater.from(pluginContext)
+    .cloneInContext(pluginContext)
+    .inflate(R.layout.my_panel, root, false);` },
+                {
+                    type: 'code', filename: 'MyPlugin.java', lang: 'java', code:
+                        `context.getExtensions().register(
+    PluginUiExtensionPoints.FILE_PANEL,
+    new MyFilePanel(),
+    context.getDescriptor().getId(),
+    0);` },
+                { type: 'note', variant: 'tip', text: 'هر دو `EditorPanel` و `FilePanel` از واسط مشترک `Panel` ارث می‌برند، پس دقیقاً از یک منطق میزبانی مشترک استفاده می‌کنند. برای نمایش پنل با نوع پنجره‌ای غیر از side sheet پیش‌فرض، `getState()` را override کن یا `setState(PluginStateMod)` صدا بزن — مثلاً `BOTTOMSHEETDIALOG`.' },
+                { type: 'note', variant: 'info', text: 'پاپ‌آپ پلاگین که از فایل‌منیجر باز می‌شود، پنل‌های `FILE_PANEL` را به‌صورت bottom sheet داخل فایل‌منیجر نشان می‌دهد؛ همان پاپ‌آپ اگر از ادیتور باز شود، پنل‌های `EDITOR_PANEL` را داخل ادیتور نشان می‌دهد.' }
             ]
         },
 

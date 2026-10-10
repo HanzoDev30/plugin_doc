@@ -4,7 +4,7 @@
 
 - Repository: https://github.com/HanzoDev1375/GhostIdes
 - Version: plugin-api 0.1.0
-- Pages: 38
+- Pages: 51
 - Generated from the real module source (no build step).
 
 # فهرست مطالب
@@ -48,6 +48,7 @@
 - FileManagerHost — `file-manager-host` (ide-ui-api)
 - CodeRunnerHost — `code-runner-host` (ide-ui-api)
 - EditorPanel — `editor-panel` (ide-ui-api)
+- FilePanel — `file-panel` (ide-ui-api)
 - EditorActionHandler — `editor-action-handler` (ide-ui-api)
 - UiFeedbackHost — `ui-feedback-host` (ide-ui-api)
 - IdeEvents / FileEvent — `ide-events` (ide-ui-api)
@@ -62,6 +63,20 @@
 
 ## نمونه‌ی کامل
 - Hello Ghost — `hello-world` (gpl runtime)
+
+## نمونه‌های آماده
+- ساختار پروژه‌ی نمونه — `sample-overview`
+- کلاس ورودی کامل — `sample-entry` (plugin-api)
+- تنظیمات پلاگین در صفحه‌ی تنظیمات — `sample-settings` (plugin-api)
+- صفحه‌ی UI (PluginScreen) — `sample-screen` (ide-ui-api)
+- پنل ادیتور (EditorPanel) — `sample-panel` (ide-ui-api)
+- دستور (PluginCommand) — `sample-command` (plugin-api)
+- ذخیره‌سازی (PluginStorage) — `sample-storage` (plugin-api)
+- گوش‌دادن به رویدادهای فایل — `sample-events` (ide-ui-api)
+- آیکن فایل سفارشی — `sample-icons` (ide-ui-api)
+- افزودن Language Server — `sample-lsp` (ide-api)
+- پیام‌ها و سرویس‌های میزبان — `sample-feedback` (ide-ui-api)
+- ساخت و بسته‌بندی .gpl — `sample-build`
 
 
 # معرفی
@@ -101,7 +116,7 @@ API در سه ماژول جدا از هم پخش شده تا هر پلاگین �
 
 - **plugin-api** — مدل پلاگین، PluginContext، ExtensionPoint/Registry، ServiceKey/Registry، GlobalRegistry.
 - **ide-api** — وابسته به plugin-api. اکستنشن‌پوینت LSP_SERVER_PROVIDER برای افزودن Language Server.
-- **ide-ui-api** — وابسته به plugin-api. اکستنشن‌پوینت‌های PLUGIN_SCREEN / EDITOR_PANEL / EDITOR_ACTION_HANDLER و سرویس‌های EditorHost / FileManagerHost / CodeRunnerHost.
+- **ide-ui-api** — وابسته به plugin-api. اکستنشن‌پوینت‌های PLUGIN_SCREEN / EDITOR_PANEL / FILE_PANEL / EDITOR_ACTION_HANDLER و سرویس‌های EditorHost / FileManagerHost / CodeRunnerHost.
 
 ماژول `:app` (خود اپ) به هر سه بستگی دارد و در واقع تنها جایی است که پیاده‌سازی واقعی رجیستری‌ها (`DefaultExtensionRegistry`, `DefaultServiceRegistry`) و بارگذار پلاگین (`GplPluginLoader`) در آن زندگی می‌کند. کد پلاگین هرگز مستقیم با کلاس‌های داخلی `:app` صحبت نمی‌کند — فقط با رابط‌های `plugin-api`/`ide-api`/`ide-ui-api`.
 
@@ -446,13 +461,14 @@ storage.putString("lastPath", "/sdcard/Project/main.py");
 
 قراردادی که یک گروه از قابلیت‌های ثبت‌شده باید پیاده کنند.
 
-یک `record` ساده شامل شناسه‌ی یکتا و نوع (`Class`) قراردادی که هر ثبت‌کننده باید پیاده کند. خود این پلتفرم فعلاً هفت اکستنشن‌پوینت آماده دارد:
+یک `record` ساده شامل شناسه‌ی یکتا و نوع (`Class`) قراردادی که هر ثبت‌کننده باید پیاده کند. خود این پلتفرم فعلاً هشت اکستنشن‌پوینت آماده دارد:
 
 | اکستنشن‌پوینت | نوع | ماژول |
 | --- | --- | --- |
 | `EditorExtensionPoints.LSP_SERVER_PROVIDER` | `LspServerProvider` | `ide-api` |
 | `PluginUiExtensionPoints.PLUGIN_SCREEN` | `PluginScreen` | `ide-ui-api` |
 | `PluginUiExtensionPoints.EDITOR_PANEL` | `EditorPanel` | `ide-ui-api` |
+| `PluginUiExtensionPoints.FILE_PANEL` | `FilePanel` | `ide-ui-api` |
 | `PluginUiExtensionPoints.EDITOR_ACTION_HANDLER` | `EditorActionHandler` | `ide-ui-api` |
 | `PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR` | `FileIconContributor` | `ide-ui-api` |
 | `IdeEvents.FILE_EVENT` | `FileEventListener` | `ide-ui-api` |
@@ -472,7 +488,7 @@ public record ExtensionPoint<T>(String id, Class<T> type) {
 }
 ```
 
-برای جزئیات هر کدام، صفحه‌ی LspServerProvider، PluginScreen، EditorPanel یا EditorActionHandler را ببین.
+برای جزئیات هر کدام، صفحه‌ی LspServerProvider، PluginScreen، EditorPanel، FilePanel یا EditorActionHandler را ببین.
 
 
 ---
@@ -863,7 +879,7 @@ public record LspServerRequest(File projectRoot, File file) {
 
 > **[INFO]** اندروید اجازه نمی‌دهد کد بارگذاری‌شده در زمان اجرا یک `<activity>` تازه در مانیفست میزبان اعلام کند. به همین دلیل "صفحه" یک پلاگین در واقع یک `Fragment` است، نه یک Activity — همان تکنیکی که چارچوب‌های پلاگین اندرویدی معمولاً استفاده می‌کنند. اپ میزبان یک اکتیویتی میزبان‌کننده‌ی صفحه دارد که این Fragment را نمایش می‌دهد.
 
-برای افزودن یک صفحه، رابط PluginScreen را ببین. برای بازکردن پنل داخل ادیتورِ در حال اجرا، EditorPanel را ببین. برای دسترسی به ادیتور یا فایل‌منیجر باز، رابط‌های EditorHost و FileManagerHost را ببین. برای اجرای کد یا دستور شل، CodeRunnerHost را ببین. برای هندل محلی دستورهای سرور زبان، EditorActionHandler را ببین.
+برای افزودن یک صفحه، رابط PluginScreen را ببین. برای بازکردن پنل داخل ادیتورِ در حال اجرا، EditorPanel را ببین؛ برای بازکردن پنل داخل فایل‌منیجر، FilePanel را ببین. برای دسترسی به ادیتور یا فایل‌منیجر باز، رابط‌های EditorHost و FileManagerHost را ببین. برای اجرای کد یا دستور شل، CodeRunnerHost را ببین. برای هندل محلی دستورهای سرور زبان، EditorActionHandler را ببین.
 
 
 ---
@@ -1099,6 +1115,53 @@ View view = LayoutInflater.from(pluginContext)
 مسیری را برمی‌گرداند که پنل در حال حاضر درباره‌ی آن است — مثلاً فایلی که کاربر پنل انتخاب کرده. میزبان هنگام اجرای فایل جاری (`CodeRunnerHost.runCurrentFile()`) به `getLastPath()` همه‌ی پنل‌ها نگاه می‌کند؛ اگر `null` برگردانی، به فایل بازِ ادیتور سقوط می‌کند.
 
 > **[TIP]** برای نمایش پنل با نوع پنجره‌ی متفاوت، `getState()` را override کن یا `setState(PluginStateMod)` صدا بزن — side sheet، dialog، bottom sheet و بقیه همگی پشتیبانی می‌شوند.
+
+
+---
+
+# FilePanel
+> گروه: رابط کاربری · فایل: FilePanel.java · ماژول: ide-ui-api
+
+یک پنل UI که پلاگین داخل صفحه‌ی بازِ فایل‌منیجر باز می‌کند — دقیقاً قرینه‌ی EditorPanel.
+
+یک پیاده‌سازی را در `PluginUiExtensionPoints.FILE_PANEL` ثبت کن. چرخه‌ی عمر و حالت‌های نمایشش دقیقاً مثل EditorPanel است، با این تفاوت که صفحه‌ی میزبان **فایل‌منیجر** است. این باعث می‌شود پلاگین (git clone، آرشیو، sync و ...) بدون ترک لیست فایل‌ها UI خودش را نشان دهد.
+
+```java — FilePanel.java
+public interface FilePanel extends Panel {
+
+  String getId();
+
+  String getTitle();
+
+  View createView();
+
+  // اختیاری: این پنل به چه مسیری اشاره دارد
+  default String getLastPath() {
+    return null;
+  }
+}
+```
+
+میزبان فقط یک‌بار، وقتی پنل اولین بار نمایش داده می‌شود، `View` آن را می‌سازد و تا پایان عمر اکتیویتی نگهش می‌دارد؛ پس view را تنبل (lazy) بساز و حالتش را داخل خودش نگه دار. برای inflate هم مثل `EditorPanel` باید از Context مخصوص خودِ پلاگین استفاده کنی:
+
+```java — MyFilePanel.java
+Context pluginContext = context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+View view = LayoutInflater.from(pluginContext)
+    .cloneInContext(pluginContext)
+    .inflate(R.layout.my_panel, root, false);
+```
+
+```java — MyPlugin.java
+context.getExtensions().register(
+    PluginUiExtensionPoints.FILE_PANEL,
+    new MyFilePanel(),
+    context.getDescriptor().getId(),
+    0);
+```
+
+> **[TIP]** هر دو `EditorPanel` و `FilePanel` از واسط مشترک `Panel` ارث می‌برند، پس دقیقاً از یک منطق میزبانی مشترک استفاده می‌کنند. برای نمایش پنل با نوع پنجره‌ای غیر از side sheet پیش‌فرض، `getState()` را override کن یا `setState(PluginStateMod)` صدا بزن — مثلاً `BOTTOMSHEETDIALOG`.
+
+> **[INFO]** پاپ‌آپ پلاگین که از فایل‌منیجر باز می‌شود، پنل‌های `FILE_PANEL` را به‌صورت bottom sheet داخل فایل‌منیجر نشان می‌دهد؛ همان پاپ‌آپ اگر از ادیتور باز شود، پنل‌های `EDITOR_PANEL` را داخل ادیتور نشان می‌دهد.
 
 
 ---
@@ -1605,4 +1668,980 @@ public final class HelloScreen implements PluginScreen {
 5. اپ را ری‌استارت کن؛ «Hello Ghost» باید به‌عنوان یک صفحه‌ی پلاگین فعال در دسترس باشد.
 
 > **[TIP]** همین الگو، با جایگزین‌کردن `PluginUiExtensionPoints.PLUGIN_SCREEN` با `EditorExtensionPoints.LSP_SERVER_PROVIDER`، دقیقاً همان مسیری است که یک پلاگین Language Server طی می‌کند — LspServerProvider را ببین.
+
+
+---
+
+# ساختار پروژه‌ی نمونه
+> گروه: نمونه‌های آماده · فایل: SampleKit/
+
+یک پروژه‌ی کامل و آماده‌ی کپی (SampleKit) که همه‌ی نمونه‌های این بخش از آن گرفته شده‌اند. با همین اسکلت، پلاگین خودت را بدون دردسر بالا بیاور.
+
+پروژه یک ماژول اپ اندروید است که هیچ Activity ندارد؛ فقط برای گرفتن خروجی `classes.dex` ساخته می‌شود. وابستگی‌ها به‌صورت `compileOnly` از پوشه‌ی `libs/` خوانده می‌شوند تا داخل `.gpl` کپی نشوند.
+
+## ساختار درخت فایل‌ها
+
+```text — tree
+SampleKit/
+├─ settings.gradle
+├─ build.gradle
+├─ gradle.properties
+└─ app/
+   ├─ build.gradle
+   └─ src/main/
+      ├─ AndroidManifest.xml
+      ├─ assets/
+      │  ├─ plugin.json
+      │  └─ fileicons/icons.json
+      ├─ res/values/strings.xml
+      └─ java/com/example/samplekit/
+         ├─ SampleKitPlugin.java
+         ├─ SampleSettings.java
+         ├─ SampleSettingsContributor.java
+         ├─ ui/SampleScreen.java
+         ├─ ui/SamplePanel.java
+         ├─ command/SampleCommand.java
+         ├─ icons/SampleIcons.java
+         └─ lsp/SampleLspProvider.java
+```
+
+## ۱. settings.gradle
+
+```gradle — settings.gradle
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = 'SampleKit'
+include ':app'
+```
+
+## ۲. build.gradle ریشه
+
+```gradle — build.gradle
+plugins {
+    id 'com.android.application' version '8.5.0' apply false
+}
+```
+
+## ۳. app/build.gradle
+
+سه فایل API را در `app/libs/` بگذار: `plugin-api-0.1.0.jar`، `ide-api-0.1.0.jar` و `ide-ui-api-release.aar`. اگر پلاگینت LSP ندارد می‌توانی `ide-api` را حذف کنی و اگر UI ندارد `ide-ui-api` را.
+
+```gradle — app/build.gradle
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.example.samplekit'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 36
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    compileOnly fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
+}
+```
+
+## ۴. AndroidManifest.xml
+
+```text — app/src/main/AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- این یک اپ واقعی نیست؛ فقط برای ساختن dex. هیچ Activity و مجوزی لازم نیست. -->
+    <application
+        android:allowBackup="false"
+        android:label="SampleKit" />
+
+</manifest>
+```
+
+## ۵. مانیفست پلاگین
+
+```json — app/src/main/assets/plugin.json
+{
+  "id": "com.example.sample-kit",
+  "name": "Sample Kit",
+  "version": "1.0.0",
+  "entryClass": "com.example.samplekit.SampleKitPlugin",
+  "description": "یک پلاگین نمونه که همه‌ی قابلیت‌های Ghost IDE را نشان می‌دهد.",
+  "author": "You",
+  "minHostVersion": 1,
+  "icon": "icon.png"
+}
+```
+
+> **[TIP]** فیلد `id` باید فقط حرف، عدد، `.`، `_` و `-` داشته باشد و همان شناسه‌ای باشد که همه‌جا به‌عنوان `owner` هنگام ثبت اکستنشن‌ها می‌دهی — معمولاً `context.getDescriptor().getId()`.
+
+حالا سراغ کلاس ورودی کامل برو تا ببینی همه‌ی قطعات چطور به هم وصل می‌شوند.
+
+
+---
+
+# کلاس ورودی کامل
+> گروه: نمونه‌های آماده · فایل: SampleKitPlugin.java · ماژول: plugin-api
+
+یک کلاس ورودی که هر هفت نوع مشارکت را ثبت می‌کند: تنظیمات، صفحه، پنل، دستور، رویداد، آیکن و Language Server.
+
+همه‌چیز از `activate(PluginContext)` شروع می‌شود. هر `register(...)` یک `Disposable` برمی‌گرداند که با `context.registerDisposable(...)` ثبت می‌شود تا هنگام unload خودکار آزاد شود.
+
+```java — SampleKitPlugin.java
+package com.example.samplekit;
+
+import android.content.Context;
+
+import java.util.List;
+
+import ir.hanzodev1375.ghostide.ide.api.EditorExtensionPoints;
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeEvents;
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.ide.ui.api.PluginUiExtensionPoints;
+import ir.hanzodev1375.ghostide.plugin.api.CoreExtensionPoints;
+import ir.hanzodev1375.ghostide.plugin.api.CoreServices;
+import ir.hanzodev1375.ghostide.plugin.api.ExtensionPoint;
+import ir.hanzodev1375.ghostide.plugin.api.GhostPlugin;
+import ir.hanzodev1375.ghostide.plugin.api.PluginContext;
+import ir.hanzodev1375.ghostide.plugin.api.PluginSetupAction;
+import ir.hanzodev1375.ghostide.plugin.api.PluginStorage;
+
+import com.example.samplekit.command.SampleCommand;
+import com.example.samplekit.icons.SampleIcons;
+import com.example.samplekit.lsp.SampleLspProvider;
+import com.example.samplekit.ui.SamplePanel;
+import com.example.samplekit.ui.SampleScreen;
+
+public final class SampleKitPlugin implements GhostPlugin {
+
+  private SampleSettings settings;
+  private SamplePanel panel;
+
+  /** دستورهای نصب محیط؛ میزبان فقط با تأیید کاربر در ترمینال اجرا می‌کند. */
+  @Override
+  public List<PluginSetupAction> getSetupActions() {
+    return List.of(
+        new PluginSetupAction(
+            "install-tool",
+            "Install sample tool",
+            "npm install -g sample-tool",
+            "ابزار زبان نمونه را داخل rootfs نصب می‌کند."));
+  }
+
+  @Override
+  public void activate(PluginContext context) {
+    String owner = context.getDescriptor().getId();
+    PluginStorage storage = context.getServices().require(CoreServices.PLUGIN_STORAGE);
+    Context android = context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+
+    settings = new SampleSettings(storage);
+    panel = new SamplePanel(context, settings);
+
+    // ۱) پنل ادیتور
+    register(context, owner, PluginUiExtensionPoints.EDITOR_PANEL, panel);
+
+    // ۲) صفحه‌ی کامل UI
+    register(context, owner, PluginUiExtensionPoints.PLUGIN_SCREEN, new SampleScreen());
+
+    // ۳) ردیف‌های تنظیمات در صفحه‌ی تنظیمات خود اپ
+    register(
+        context,
+        owner,
+        CoreExtensionPoints.PLUGIN_SETTINGS,
+        new SampleSettingsContributor(android, settings, panel));
+
+    // ۴) یک دستور قابل فراخوانی
+    register(context, owner, CoreExtensionPoints.PLUGIN_COMMAND, new SampleCommand(context));
+
+    // ۵) آیکن فایل سفارشی
+    register(context, owner, PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR, new SampleIcons(android));
+
+    // ۶) گوش‌دادن به رویداد فایل (ممکن است از هر threadی صدا زده شود)
+    register(
+        context,
+        owner,
+        IdeEvents.FILE_EVENT,
+        event -> context.getLogger().info("file event: " + event));
+
+    // ۷) افزودن Language Server
+    register(context, owner, EditorExtensionPoints.LSP_SERVER_PROVIDER, new SampleLspProvider(context));
+
+    context.getLogger().info("Sample Kit activated");
+  }
+
+  @Override
+  public void deactivate() {
+    // همه‌ی ثبت‌ها قبلاً Disposable گرفته‌اند؛ فقط منابع دستی را این‌جا آزاد کن.
+    if (panel != null) {
+      panel.destroy();
+      panel = null;
+    }
+  }
+
+  private static <T> void register(
+      PluginContext context, String owner, ExtensionPoint<T> point, T extension) {
+    context.registerDisposable(context.getExtensions().register(point, extension, owner, 0));
+  }
+}
+```
+
+> **[INFO]** اگر پلاگین فقط LSP است، لازم نیست به `ide-ui-api` وابسته شود؛ کافی است `plugin-api` و `ide-api` را بگیری و فقط رجیستر «۷» را نگه داری.
+
+بعد برو سراغ تنظیمات پلاگین که جدیدترین قابلیت API است.
+
+
+---
+
+# تنظیمات پلاگین در صفحه‌ی تنظیمات
+> گروه: نمونه‌های آماده · فایل: SampleSettingsContributor.java · ماژول: plugin-api
+
+به‌جای ساختن صفحه‌ی تنظیمات جداگانه، ردیف‌های تنظیمات را داخل صفحه‌ی تنظیمات خود اپ بریز — یا به‌صورت کلید روشن/خاموش یا یک ردیف قابل کلیک.
+
+واسط `PluginSettingsContributor` را پیاده کن و در اکستنشن‌پوینت `CoreExtensionPoints.PLUGIN_SETTINGS` رجیستر کن. میزبان هر بار که صفحه‌ی تنظیمات باز می‌شود `getSettings()` را تازه می‌خواند و هر ردیف را با نام پلاگین تو برچسب می‌زند.
+
+> **[INFO]** دو نوع ردیف داری: `PluginSetting.toggle(...)` برای سوئیچ و `PluginSetting.action(...)` برای یک ردیف ساده که با کلیک کد اجرا می‌کند. برای انتخاب‌های پیچیده‌تر (لیست، اسلایدر) از یک `action` استفاده کن و خودت دیالوگ یا صفحه‌ات را باز کن. callbackها روی UI thread اجرا می‌شوند.
+
+## ۱. متن‌ها را در resources بگذار
+
+متن‌ها را از `R.string` بخوان تا با زبان دستگاه ترجمه شوند و داخل `.gpl` همراه بیایند.
+
+```text — res/values/strings.xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="prefs_group_name">Sample Kit</string>
+
+    <string name="setting_wrap">Word wrap</string>
+    <string name="setting_wrap_desc">شکستن خطوط بلند در پنل</string>
+
+    <string name="setting_autoreload">Auto reload</string>
+    <string name="setting_autoreload_desc">بارگذاری مجدد هنگام ذخیره‌ی فایل</string>
+
+    <string name="setting_clear_cache">Clear cache</string>
+    <string name="setting_clear_cache_desc">پاک‌کردن کش پنل</string>
+</resources>
+```
+
+## ۲. وضعیت را در PluginStorage نگه دار
+
+```java — SampleSettings.java
+package com.example.samplekit;
+
+import ir.hanzodev1375.ghostide.plugin.api.PluginStorage;
+
+/** تنظیمات پلاگین؛ مقادیر در PluginStorage ذخیره می‌شوند و بین ری‌استارت‌ها می‌مانند. */
+public final class SampleSettings {
+
+  public static final String KEY_WRAP = "wrap";
+  public static final String KEY_AUTORELOAD = "autoreload";
+
+  private final PluginStorage storage;
+
+  public SampleSettings(PluginStorage storage) {
+    this.storage = storage;
+  }
+
+  public boolean isWrap() {
+    return storage.getBoolean(KEY_WRAP, true);
+  }
+
+  public void setWrap(boolean value) {
+    storage.putBoolean(KEY_WRAP, value);
+  }
+
+  public boolean isAutoReload() {
+    return storage.getBoolean(KEY_AUTORELOAD, true);
+  }
+
+  public void setAutoReload(boolean value) {
+    storage.putBoolean(KEY_AUTORELOAD, value);
+  }
+}
+```
+
+## ۳. ردیف‌ها را بساز
+
+```java — SampleSettingsContributor.java
+package com.example.samplekit;
+
+import android.content.Context;
+
+import java.util.List;
+
+import ir.hanzodev1375.ghostide.plugin.api.PluginSetting;
+import ir.hanzodev1375.ghostide.plugin.api.PluginSettingsContributor;
+import com.example.samplekit.ui.SamplePanel;
+
+public final class SampleSettingsContributor implements PluginSettingsContributor {
+
+  private final Context android;
+  private final SampleSettings settings;
+  private final SamplePanel panel;
+
+  public SampleSettingsContributor(Context android, SampleSettings settings, SamplePanel panel) {
+    this.android = android;
+    this.settings = settings;
+    this.panel = panel;
+  }
+
+  @Override
+  public String getId() {
+    return "com.example.samplekit.settings";
+  }
+
+  @Override
+  public String getDisplayName() {
+    return android.getString(R.string.prefs_group_name);
+  }
+
+  @Override
+  public List<PluginSetting> getSettings() {
+    return List.of(
+        PluginSetting.toggle(
+            SampleSettings.KEY_WRAP,
+            android.getString(R.string.setting_wrap),
+            android.getString(R.string.setting_wrap_desc),
+            settings.isWrap(),
+            value -> {
+              settings.setWrap(value);
+              panel.applySettings();
+            }),
+        PluginSetting.toggle(
+            SampleSettings.KEY_AUTORELOAD,
+            android.getString(R.string.setting_autoreload),
+            android.getString(R.string.setting_autoreload_desc),
+            settings.isAutoReload(),
+            settings::setAutoReload),
+        PluginSetting.action(
+            "clear_cache",
+            android.getString(R.string.setting_clear_cache),
+            android.getString(R.string.setting_clear_cache_desc),
+            panel::clearCache));
+  }
+}
+```
+
+> **[TIP]** شناسه‌ی هر ردیف (`id`) در `storage` کلید می‌شود؛ پس همان ثابت‌ها را در `SampleSettings` و contributor به کار ببر تا مقدار خوانده‌شده با مقدار ذخیره‌شده یکی بماند.
+
+
+---
+
+# صفحه‌ی UI (PluginScreen)
+> گروه: نمونه‌های آماده · فایل: SampleScreen.java · ماژول: ide-ui-api
+
+یک صفحه‌ی کامل که به لیست صفحه‌های Ghost IDE اضافه می‌شود و به سرویس‌های میزبان (ادیتور، فایل، اجرا) دسترسی دارد.
+
+`PluginScreen` فقط سه چیز می‌خواهد: `getId`، `getTitle` و `createFragment`. داخل Fragment از `IdeHostServices` سرویس می‌گیری و از `IdeHostServices.PLUGIN_ANDROID_CONTEXT` هم می‌توانی برای inflate استفاده کنی.
+
+```java — ui/SampleScreen.java
+package com.example.samplekit.ui;
+
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+
+import ir.hanzodev1375.ghostide.ide.ui.api.EditorHost;
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.ide.ui.api.PluginScreen;
+
+public final class SampleScreen implements PluginScreen {
+
+  @Override
+  public String getId() {
+    return "com.example.samplekit.screen";
+  }
+
+  @Override
+  public String getTitle() {
+    return "Sample Kit";
+  }
+
+  @Override
+  public Fragment createFragment() {
+    return new ScreenFragment();
+  }
+
+  public static final class ScreenFragment extends Fragment {
+
+    private EditorHost editor;
+
+    @Nullable
+    @Override
+    public View onCreateView(
+        @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle state) {
+      editor = (EditorHost) requireContext().getSystemService("__plugin_editor_host__");
+      return build(inflater);
+    }
+
+    private View build(LayoutInflater inflater) {
+      LinearLayout root = new LinearLayout(requireContext());
+      root.setOrientation(LinearLayout.VERTICAL);
+      int pad = dp(16);
+      root.setPadding(pad, pad, pad, pad);
+
+      TextView title = new TextView(requireContext());
+      title.setText("متن فایل فعلی:");
+      root.addView(title);
+
+      EditText input = new EditText(requireContext());
+      input.setText(editor == null ? "" : editor.getEditorText());
+      root.addView(input);
+
+      Button apply = new Button(requireContext());
+      apply.setText("جای‌گذاری در ادیتور");
+      apply.setOnClickListener(v -> {
+        if (editor != null) {
+          editor.setEditorText(input.getText().toString());
+        }
+      });
+      root.addView(apply);
+      return root;
+    }
+
+    private int dp(int value) {
+      return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+  }
+}
+```
+
+> **[WARN]** دسترسی به سرویس‌ها از این‌گونه `getSystemService` روش صحیح نیست؛ این‌جا فقط برای کوتاه‌شدن نمونه است. در کد واقعی سرویس‌ها را در `activate()` بگیر و به `createFragment()`/سازنده تزریق کن.
+
+## نسخه‌ی درست: تزریق سرویس از activate
+
+```java — ui/SampleScreen.java (بهتر)
+public final class SampleScreen implements PluginScreen {
+
+  private final EditorHost editor;
+  private final Context android;
+
+  public SampleScreen(EditorHost editor, Context android) {
+    this.editor = editor;
+    this.android = android;
+  }
+
+  @Override public String getId() { return "com.example.samplekit.screen"; }
+  @Override public String getTitle() { return "Sample Kit"; }
+  @Override public Fragment createFragment() { return new ScreenFragment(editor, android); }
+
+  public static final class ScreenFragment extends Fragment {
+    private final EditorHost editor;
+    private final Context android;
+    ScreenFragment(EditorHost editor, Context android) {
+      this.editor = editor;
+      this.android = android;
+    }
+    // ... همان build(...)
+  }
+}
+```
+
+در `SampleKitPlugin.activate` این‌طور بساز و رجیستر کن:
+
+```java — SampleKitPlugin.java (بخش)
+EditorHost editor = context.getServices().require(IdeHostServices.EDITOR_HOST);
+Context android = context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+register(context, owner, PluginUiExtensionPoints.PLUGIN_SCREEN,
+    new SampleScreen(editor, android));
+```
+
+
+---
+
+# پنل ادیتور (EditorPanel)
+> گروه: نمونه‌های آماده · فایل: SamplePanel.java · ماژول: ide-ui-api
+
+یک پنل که کنار ادیتور باز می‌شود؛ مثل پنل Live Preview. حالت نمایشش را هم می‌توانی با PluginStateMod عوض کنی.
+
+`Panel` (و در نتیجه `EditorPanel` و `FilePanel`) با `createView()` یک `View` می‌سازد و با `getState()/setState()` جای نمایشش را تعیین می‌کند: `SIDESHEET`، `DIALOGFRAGMENT`، `FRAGMENT`، `FLOATINGWINDOWS` و… .
+
+```java — ui/SamplePanel.java
+package com.example.samplekit.ui;
+
+import android.content.Context;
+import android.view.View;
+import android.widget.TextView;
+
+import ir.hanzodev1375.ghostide.ide.ui.api.EditorHost;
+import ir.hanzodev1375.ghostide.ide.ui.api.EditorPanel;
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.ide.ui.api.PluginStateMod;
+
+import com.example.samplekit.SampleSettings;
+import ir.hanzodev1375.ghostide.plugin.api.PluginContext;
+
+public final class SamplePanel implements EditorPanel {
+
+  private final PluginContext context;
+  private final SampleSettings settings;
+  private TextView view;
+
+  public SamplePanel(PluginContext context, SampleSettings settings) {
+    this.context = context;
+    this.settings = settings;
+    setState(PluginStateMod.SIDESHEET);
+  }
+
+  @Override public String getId() { return "com.example.samplekit.panel"; }
+
+  @Override public String getTitle() { return "Sample"; }
+
+  @Override
+  public View createView() {
+    Context android = context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+    view = new TextView(android);
+    view.setPadding(24, 24, 24, 24);
+    refresh();
+    return view;
+  }
+
+  public void applySettings() {
+    refresh();
+  }
+
+  public void clearCache() {
+    if (view != null) {
+      view.setText("cache cleared");
+    }
+  }
+
+  private void refresh() {
+    if (view == null) {
+      return;
+    }
+    EditorHost editor = context.getServices().require(IdeHostServices.EDITOR_HOST);
+    String wrap = settings.isWrap() ? "on" : "off";
+    view.setText("wrap: " + wrap + ", autoReload: " + settings.isAutoReload()
+        + ", file: " + editor.getOpenFile());
+  }
+
+  public void destroy() {
+    view = null;
+  }
+}
+```
+
+> **[TIP]** برای تغییر حالت نمایش، در `activate()` بعد از ساخت پنل این‌طور صدا بزن: `panel.setState(PluginStateMod.FLOATINGWINDOWS);` — این مقدار از طریق `PanelStateStore` ذخیره و به میزبان داده می‌شود.
+
+
+---
+
+# دستور (PluginCommand)
+> گروه: نمونه‌های آماده · فایل: SampleCommand.java · ماژول: plugin-api
+
+یک عمل قابل فراخوانی که میزبان (و آینده: command palette) می‌تواند فهرست و اجرا کند.
+
+`PluginCommand` سه چیز دارد: `getId()` (یکتا و reverse-domain)، `getTitle()` و `execute()`. اجرا ممکن است از هر threadی باشد؛ قبل از دست‌زدن به UI خودت به main thread برو.
+
+```java — command/SampleCommand.java
+package com.example.samplekit.command;
+
+import java.util.concurrent.Executors;
+
+import ir.hanzodev1375.ghostide.ide.ui.api.CodeRunnerHost;
+import ir.hanzodev1375.ghostide.ide.ui.api.EditorHost;
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.plugin.api.PluginCommand;
+import ir.hanzodev1375.ghostide.plugin.api.PluginContext;
+
+public final class SampleCommand implements PluginCommand {
+
+  private final PluginContext context;
+
+  public SampleCommand(PluginContext context) {
+    this.context = context;
+  }
+
+  @Override
+  public String getId() {
+    return "com.example.samplekit.runCurrentFile";
+  }
+
+  @Override
+  public String getTitle() {
+    return "Sample Kit: Run current file";
+  }
+
+  @Override
+  public String getDescription() {
+    return "فایل باز فعلی را در ترمینال اجرا می‌کند.";
+  }
+
+  @Override
+  public void execute() {
+    CodeRunnerHost runner = context.getServices().require(IdeHostServices.CODE_RUNNER_HOST);
+    EditorHost editor = context.getServices().require(IdeHostServices.EDITOR_HOST);
+    if (editor.getOpenFile() == null) {
+      return;
+    }
+    String path = editor.getOpenFile().getAbsolutePath();
+    if (runner.isSupported(path)) {
+      runner.runFile(path);
+    } else {
+      Executors.newSingleThreadExecutor().execute(() -> runner.exec("file \"" + path + "\"", null));
+    }
+  }
+}
+```
+
+> **[WARN]** در رشته‌ی داخل کد، نقل‌قول‌ها فرار داده شده‌اند تا داخل خود رشته قرار بگیرند؛ هنگام کامپایل مطمئن شو کاراکترهای escape درست باشند.
+
+
+---
+
+# ذخیره‌سازی (PluginStorage)
+> گروه: نمونه‌های آماده · فایل: SampleStorageUsage.java · ماژول: plugin-api
+
+هر پلاگین یک فضای کلید-مقدار مستقل دارد که با شناسه‌ی خودش namespace می‌شود و بین ری‌استارت‌ها می‌ماند.
+
+سرویس `CoreServices.PLUGIN_STORAGE` را بگیر و مقادیر اولیه (String/boolean/int/long/float) را ذخیره کن. برای داده‌ی حجیم فایل جداگانه در پوشه‌ی خودت بساز.
+
+```java — SampleStorageUsage.java
+import ir.hanzodev1375.ghostide.plugin.api.CoreServices;
+import ir.hanzodev1375.ghostide.plugin.api.PluginStorage;
+
+// داخل activate:
+PluginStorage storage = context.getServices().require(CoreServices.PLUGIN_STORAGE);
+
+storage.putString("lastFile", "/sdcard/notes.txt");
+storage.putInt("runCount", storage.getInt("runCount", 0) + 1);
+storage.putBoolean("firstRun", false);
+
+String last = storage.getString("lastFile", "");
+boolean has = storage.contains("runCount");
+storage.remove("lastFile");
+// storage.clear(); // همه‌ی داده‌های این پلاگین را پاک می‌کند
+```
+
+> **[INFO]** مقدار پیش‌فرض (`defValue`) را همیشه بده؛ کلید ناموجود همان را برمی‌گرداند و استثنایی پرتاب نمی‌شود.
+
+
+---
+
+# گوش‌دادن به رویدادهای فایل
+> گروه: نمونه‌های آماده · فایل: IdeEventsListener.java · ماژول: ide-ui-api
+
+با اکستنشن‌پوینت IdeEvents.FILE_EVENT بفهم کِی فایلی باز، ذخیره، بسته، حذف یا تغییرنام داده شده.
+
+یک `FileEventListener` ثبت کن. رویداد `FileEvent` یک `type()` (OPENED/SAVED/CLOSED/DELETED/RENAMED)، یک `path()` و برای تغییرنام یک `previousPath()` دارد.
+
+```java — IdeEventsListener.java
+import ir.hanzodev1375.ghostide.ide.ui.api.FileEvent;
+import ir.hanzodev1375.ghostide.ide.ui.api.FileEventListener;
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeEvents;
+
+// داخل activate:
+FileEventListener listener = new FileEventListener() {
+  @Override
+  public void onFileEvent(FileEvent event) {
+    switch (event.type()) {
+      case SAVED:
+        context.getLogger().info("saved: " + event.path());
+        break;
+      case RENAMED:
+        context.getLogger().info(event.previousPath() + " -> " + event.path());
+        break;
+      default:
+        break;
+    }
+  }
+};
+context.registerDisposable(
+    context.getExtensions().register(IdeEvents.FILE_EVENT, listener, owner, 0));
+```
+
+> **[WARN]** listener ممکن است روی هر threadی صدا زده شود؛ هرگز مستقیم از آن به View دست نزن.
+
+
+---
+
+# آیکن فایل سفارشی
+> گروه: نمونه‌های آماده · فایل: SampleIcons.java · ماژول: ide-ui-api
+
+با یک فایل JSON و چند تصویر، آیکن فایل‌های مخصوص زبان خودت را در درخت فایل جایگزین کن.
+
+کلاس آماده‌ی `JsonFileIconContributor` یک فایل JSON و پوشه‌ی تصاویر می‌گیرد و آیکن مناسب هر پسوند/نام فایل/پوشه را برمی‌گرداند. تصاویر از assets استخراج و کش می‌شوند.
+
+## ۱. فایل JSON آیکن‌ها
+
+```json — assets/fileicons/icons.json
+{
+  "asset_dir": "fileicons",
+  "defaults": {
+    "file": "default_file",
+    "folder": "default_folder",
+    "root_folder": "default_root_folder"
+  },
+  "fileExtensions": {
+    "foo": "file_type_foo",
+    "bar": "file_type_bar"
+  },
+  "fileNames": {
+    "makefile": "file_type_makefile"
+  },
+  "folderNames": {
+    "src": "folder_src"
+  }
+}
+```
+
+کنار همین فایل، تصاویر `file_type_foo.svg`، `folder_src.svg` و… را در پوشه‌ی `assets/fileicons/` بگذار (پسوندهای `.svg/.png/.jpg/.webp` پشتیبانی می‌شوند).
+
+## ۲. کلاس contributor
+
+```java — icons/SampleIcons.java
+package com.example.samplekit.icons;
+
+import android.content.Context;
+
+import ir.hanzodev1375.ghostide.ide.ui.api.FileIconContributor;
+import ir.hanzodev1375.ghostide.ide.ui.api.JsonFileIconContributor;
+
+public final class SampleIcons implements FileIconContributor {
+
+  private final JsonFileIconContributor delegate;
+
+  public SampleIcons(Context android) {
+    this.delegate = new JsonFileIconContributor(android, "fileicons/icons.json");
+  }
+
+  @Override
+  public String getIcon(String filePath) {
+    return delegate.getIcon(filePath);
+  }
+}
+```
+
+> **[TIP]** اگر فقط چند پسوند ساده می‌خواهی، می‌توانی مستقیماً `FileIconContributor` را پیاده کنی و بسته به `filePath` یک نام drawable یا مسیر برگردانی.
+
+
+---
+
+# افزودن Language Server
+> گروه: نمونه‌های آماده · فایل: SampleLspProvider.java · ماژول: ide-api
+
+یک زبان جدید را به ادیتور معرفی کن. میزبان خودش چرخه‌ی LSP را مدیریت می‌کند؛ تو فقط می‌گویی کدام فایل‌ها را پشتیبانی می‌کنی و چطور پروسه را اجرا کنی.
+
+`LspServerProvider` تعیین می‌کند کدام درخواست را پشتیبانی می‌کند و یک `LspServerDefinition` می‌سازد. خود تعریف شامل پسوندها، نمایش‌نام و یک `LspServerConnectionFactory` است. اگر سرورت داخل rootfs پروت است، از سرویس `ProotProcessLauncher` استفاده کن.
+
+```java — lsp/SampleLspProvider.java
+package com.example.samplekit.lsp;
+
+import java.util.List;
+import java.util.Set;
+
+import ir.hanzodev1375.ghostide.ide.api.LspServerConnection;
+import ir.hanzodev1375.ghostide.ide.api.LspServerDefinition;
+import ir.hanzodev1375.ghostide.ide.api.LspServerProvider;
+import ir.hanzodev1375.ghostide.ide.api.LspServerRequest;
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.ide.ui.api.ProotProcessLauncher;
+import ir.hanzodev1375.ghostide.plugin.api.PluginContext;
+
+public final class SampleLspProvider implements LspServerProvider {
+
+  private final ProotProcessLauncher launcher;
+
+  public SampleLspProvider(PluginContext context) {
+    this.launcher = context.getServices().require(IdeHostServices.PROOT_PROCESS_LAUNCHER);
+  }
+
+  @Override
+  public String getId() {
+    return "com.example.samplekit.lsp";
+  }
+
+  @Override
+  public String getDisplayName() {
+    return "Sample Language";
+  }
+
+  @Override
+  public boolean supports(LspServerRequest request) {
+    return "foo".equals(request.extension());
+  }
+
+  @Override
+  public LspServerDefinition createDefinition(LspServerRequest request) {
+    return LspServerDefinition
+        .builder(
+            "sample-language",
+            Set.of("foo"),
+            "Sample Language",
+            r -> launcher.launch(
+                r.projectRoot().getAbsolutePath(),
+                "/usr/bin/sample-ls",
+                List.of("--stdio")))
+        .grammarScopeName("source.foo")
+        .enableInlayHints(true)
+        .enableSignatureHelp(true)
+        .initializationTimeoutMillis(10000)
+        .build();
+  }
+}
+```
+
+## اتصال دستی (بدون proot)
+
+اگر می‌خواهی پروسه را خودت مدیریت کنی، یک `LspServerConnection` بنویس که `start()`، `getInputStream()/getOutputStream()` و `close()` را پیاده کند و همان را داخل builder بده.
+
+```java — MyConnection.java
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import ir.hanzodev1375.ghostide.ide.api.LspServerConnection;
+
+public final class MyConnection implements LspServerConnection {
+
+  private final Process process;
+
+  public MyConnection(Process process) {
+    this.process = process;
+  }
+
+  @Override public void start() throws IOException { /* process already started */ }
+  @Override public OutputStream getOutputStream() { return process.getOutputStream(); }
+  @Override public InputStream getInputStream() { return process.getInputStream(); }
+  @Override public boolean isClosed() { return !process.isAlive(); }
+  @Override public void close() { process.destroy(); }
+}
+```
+
+> **[INFO]** مقدار `grammarScopeName` به ThemeMaker وصل می‌شود تا رنگ‌آمیزی نحو درست اعمال شود.
+
+
+---
+
+# پیام‌ها و سرویس‌های میزبان
+> گروه: نمونه‌های آماده · فایل: FeedbackUsage.java · ماژول: ide-ui-api
+
+برای پیام کوتاه، پرسیدن ورودی و تأیید، از UiFeedbackHost استفاده کن؛ برای کار با ادیتور، فایل و اجرا هم سرویس‌های میزبان در دسترس‌اند.
+
+`UiFeedbackHost` سه متد دارد: `toast`، `promptInput` و `confirm`. همه‌ی سرویس‌های میزبان با `context.getServices().require(...)` گرفته می‌شوند.
+
+```java — FeedbackUsage.java
+import ir.hanzodev1375.ghostide.ide.ui.api.CodeRunnerHost;
+import ir.hanzodev1375.ghostide.ide.ui.api.EditorHost;
+import ir.hanzodev1375.ghostide.ide.ui.api.FileManagerHost;
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.ide.ui.api.UiFeedbackHost;
+
+// داخل activate یا هر جای دیگر:
+UiFeedbackHost feedback = context.getServices().require(IdeHostServices.UI_FEEDBACK);
+EditorHost editor = context.getServices().require(IdeHostServices.EDITOR_HOST);
+FileManagerHost files = context.getServices().require(IdeHostServices.FILE_MANAGER_HOST);
+CodeRunnerHost runner = context.getServices().require(IdeHostServices.CODE_RUNNER_HOST);
+
+feedback.toast("Sample Kit ready");
+
+feedback.promptInput("نام فایل جدید", "untitled.txt", text -> {
+  if (text != null) {
+    editor.setEditorText("// " + text);
+  }
+});
+
+feedback.confirm("پاک کردن کش؟", "این عمل برگشت‌پذیر نیست.", confirmed -> {
+  if (confirmed) {
+    runner.runShell("rm -rf cache", true);
+  }
+});
+
+// اجرای مستقیم یک دستور و خواندن خروجی
+CodeRunnerHost.ExecResult result = runner.exec("echo hi", line -> {});
+if (result.success()) {
+  feedback.toast(result.output());
+}
+```
+
+## جدول سرویس‌های میزبان
+
+| سرویس | کلید | کاربرد |
+| --- | --- | --- |
+| `EditorHost` | `IdeHostServices.EDITOR_HOST` | فایل باز، متن ادیتور، باز کردن فایل |
+| `FileManagerHost` | `IdeHostServices.FILE_MANAGER_HOST` | ریشه‌ی پروژه، فایل انتخاب‌شده، refresh |
+| `CodeRunnerHost` | `IdeHostServices.CODE_RUNNER_HOST` | اجرای شل/فایل و گرفتن خروجی |
+| `UiFeedbackHost` | `IdeHostServices.UI_FEEDBACK` | toast، پرسیدن ورودی، تأیید |
+| `ProotProcessLauncher` | `IdeHostServices.PROOT_PROCESS_LAUNCHER` | اجرای پروسه داخل rootfs |
+| `Context` | `IdeHostServices.PLUGIN_ANDROID_CONTEXT` | دسترسی به resources و inflate |
+
+
+---
+
+# ساخت و بسته‌بندی .gpl
+> گروه: نمونه‌های آماده · فایل: build-gpl.sh
+
+خروجی پروژه را به یک فایل .gpl تبدیل کن: کامپایل، ساختن dex با d8، و zip کردن همراه مانیفست.
+
+فایل `.gpl` در واقع یک zip است که حداقل `classes.dex` و `assets/plugin.json` را دارد. منابع (مانند `resources.arsc` برای `R.string`) هم باید داخل zip باشند تا متن‌های پلاگین درست بیایند.
+
+1. پلاگین را کامپایل کن: `./gradlew :app:assembleDebug` (خروجی dex/jar موقت).
+2. کلاس‌های پلاگین را با `d8` به `classes.dex` تبدیل کن.
+3. `classes.dex`، پوشه‌ی `assets/` (شامل `plugin.json`) و در صورت وجود `resources.arsc`/`res/` را در یک zip بگذار.
+4. پسوند zip را به `.gpl` تغییر بده.
+5. فایل را در `filesDir/gpl_plugins/` دستگاه کپی کن و اپ را ری‌استارت کن.
+
+## اسکریپت نمونه
+
+```bash — build-gpl.sh
+#!/usr/bin/env bash
+set -euo pipefail
+
+OUT=build/gpl
+rm -rf "$OUT"
+mkdir -p "$OUT"
+
+# ۱) کامپایل کلاس‌های پلاگین در برابر APIها
+javac -source 17 -target 17 \
+  -cp "app/libs/plugin-api-0.1.0.jar:app/libs/ide-api-0.1.0.jar" \
+  -d "$OUT/classes" \
+  $(find app/src/main/java -name '*.java')
+
+# ۲) تبدیل به dex  (d8 از build-tools اندروید)
+d8 --min-api 26 --output "$OUT" \
+  $(find "$OUT/classes" -name '*.class')
+
+# ۳) کنار هم گذاشتن مانیفست و منابع
+cp -r app/src/main/assets "$OUT/" 2>/dev/null || true
+
+# ۴) ساخت فایل .gpl
+mkdir -p "$OUT/zip"
+cp "$OUT/classes.dex" "$OUT/zip/"
+cp -r "$OUT/assets" "$OUT/zip/" 2>/dev/null || true
+(cd "$OUT/zip" && zip -r ../samplekit.gpl .)
+
+echo "ساخته شد: $OUT/samplekit.gpl"
+```
+
+> **[TIP]** برای افزودن متن‌های `R.string` باید `resources.arsc` و پوشه‌ی `res/` را هم از خروجی `assembleDebug` داخل zip بگذاری؛ وگرنه `Context.getString` روی منابع پلاگین پیدا نمی‌شود.
+
+> **[INFO]** مسیر نصب و بارگذاری را در فرمت .gpl و نصب پلاگین ببین.
 

@@ -20,6 +20,24 @@ const CONTENT = {
     en: evalVar('assets/js/content.en.js', 'CONTENT_EN')
 };
 
+// Samples live in their own files so the main content files stay small; merge them in.
+const SAMPLES = {
+    fa: (() => { try { return evalVar('assets/js/samples.fa.js', 'SAMPLES_FA'); } catch (e) { return null; } })(),
+    en: (() => { try { return evalVar('assets/js/samples.en.js', 'SAMPLES_EN'); } catch (e) { return null; } })()
+};
+
+function mergeSamples(lang) {
+    const content = CONTENT[lang];
+    const samples = SAMPLES[lang];
+    if (!content || !samples) return;
+    content.nav.groups.samples = samples.groupLabel;
+    Object.keys(samples.titles).forEach((slug) => { content.nav.pages[slug] = samples.titles[slug]; });
+    Object.keys(samples.pages).forEach((slug) => { content.pages[slug] = samples.pages[slug]; });
+}
+
+mergeSamples('fa');
+mergeSamples('en');
+
 const META = {
     title: 'Ghost IDE Plugin Docs',
     summaryFa: 'سایت مستندات پلاگین‌نویسی Ghost IDE — API سه‌بخشی (plugin-api، ide-api، ide-ui-api)، سیستم اکستنشن/سرویس، یکپارچه‌سازی LSP، رابط کاربری و بسته‌بندی .gpl.',
