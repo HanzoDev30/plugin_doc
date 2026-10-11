@@ -11,7 +11,9 @@ var SAMPLES_FA = {
         'sample-command': 'دستور (PluginCommand)',
         'sample-storage': 'ذخیره‌سازی (PluginStorage)',
         'sample-events': 'گوش‌دادن به رویدادهای فایل',
-        'sample-icons': 'آیکن فایل سفارشی',
+        'sample-icons': 'ایکون فایل سفارشی',
+        'sample-toolbar': 'ایکون نوار ابزار (عمل یک‌لمسی)',
+        'sample-file-click': 'تصاحب کلیک فایل (SVG → PNG)',
         'sample-lsp': 'افزودن Language Server',
         'sample-feedback': 'پیام‌ها و سرویس‌های میزبان',
         'sample-build': 'ساخت و بسته‌بندی .gpl'
@@ -141,7 +143,7 @@ dependencies {
             title: 'کلاس ورودی کامل',
             filename: 'SampleKitPlugin.java',
             module: 'plugin-api',
-            dek: 'یک کلاس ورودی که هر هفت نوع مشارکت را ثبت می‌کند: تنظیمات، صفحه، پنل، دستور، رویداد، آیکن و Language Server.',
+            dek: 'یک کلاس ورودی که هر هفت نوع مشارکت را ثبت می‌کند: تنظیمات، صفحه، پنل، دستور، رویداد، ایکون و Language Server.',
             blocks: [
                 { type: 'p', text: 'همه‌چیز از `activate(PluginContext)` شروع می‌شود. هر `register(...)` یک `Disposable` برمی‌گرداند که با `context.registerDisposable(...)` ثبت می‌شود تا هنگام unload خودکار آزاد شود.' },
                 {
@@ -211,7 +213,7 @@ public final class SampleKitPlugin implements GhostPlugin {
     // ۴) یک دستور قابل فراخوانی
     register(context, owner, CoreExtensionPoints.PLUGIN_COMMAND, new SampleCommand(context));
 
-    // ۵) آیکن فایل سفارشی
+    // ۵) ایکون فایل سفارشی
     register(context, owner, PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR, new SampleIcons(android));
 
     // ۶) گوش‌دادن به رویداد فایل (ممکن است از هر threadی صدا زده شود)
@@ -706,13 +708,13 @@ context.registerDisposable(
         },
 
         'sample-icons': {
-            title: 'آیکن فایل سفارشی',
+            title: 'ایکون فایل سفارشی',
             filename: 'SampleIcons.java',
             module: 'ide-ui-api',
-            dek: 'با یک فایل JSON و چند تصویر، آیکن فایل‌های مخصوص زبان خودت را در درخت فایل جایگزین کن.',
+            dek: 'با یک فایل JSON و چند تصویر، ایکون فایل‌های مخصوص زبان خودت را در درخت فایل جایگزین کن.',
             blocks: [
-                { type: 'p', text: 'کلاس آماده‌ی `JsonFileIconContributor` یک فایل JSON و پوشه‌ی تصاویر می‌گیرد و آیکن مناسب هر پسوند/نام فایل/پوشه را برمی‌گرداند. تصاویر از assets استخراج و کش می‌شوند.' },
-                { type: 'h2', text: '۱. فایل JSON آیکن‌ها' },
+                { type: 'p', text: 'کلاس آماده‌ی `JsonFileIconContributor` یک فایل JSON و پوشه‌ی تصاویر می‌گیرد و ایکون مناسب هر پسوند/نام فایل/پوشه را برمی‌گرداند. تصاویر از assets استخراج و کش می‌شوند.' },
+                { type: 'h2', text: '۱. فایل JSON ایکون‌ها' },
                 {
                     type: 'code', filename: 'assets/fileicons/icons.json', lang: 'json', code:
 `{
@@ -760,6 +762,142 @@ public final class SampleIcons implements FileIconContributor {
 }`
                 },
                 { type: 'note', variant: 'tip', text: 'اگر فقط چند پسوند ساده می‌خواهی، می‌توانی مستقیماً `FileIconContributor` را پیاده کنی و بسته به `filePath` یک نام drawable یا مسیر برگردانی.' }
+            ]
+        },
+
+        'sample-toolbar': {
+            title: 'ایکون نوار ابزار (عمل یک‌لمسی)',
+            filename: 'SampleToolbarIcon.java',
+            module: 'ide-ui-api',
+            dek: 'یک اکشن دائمی کنار ایکون‌های خود IDE بگذار — در ادیتور یا فایل‌منیجر — و پنل خودت را با یک لمس اجرا کن، بدون باز کردن پاپ‌آپ.',
+            blocks: [
+                { type: 'p', text: '`PluginIcons.setPluginShowState(context, state, title, onClick, icon)` برایت یک `PluginToolbarIcon` در `PluginUiExtensionPoints.TOOLBAR_ICON` ثبت می‌کند. `PluginIconState.Editor` آن را در نوار ابزار **ادیتور** و `PluginIconState.FileES` در نوار ابزار **فایل‌منیجر** می‌گذارد. ایکون می‌تواند از `R.drawable.*` باشد یا مستقیم از assetهای پلاگین — مثل `BitmapDrawable` از یک PNG در نمونه‌ی زیر.' },
+                { type: 'code', filename: 'SampleToolbarIcon.java', lang: 'java', code:
+`package com.example.samplekit;
+
+import android.content.Context;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.view.View;
+
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.ide.ui.api.PluginIconState;
+import ir.hanzodev1375.ghostide.ide.ui.api.PluginIcons;
+import ir.hanzodev1375.ghostide.ide.ui.api.PanelHostService;
+import ir.hanzodev1375.ghostide.plugin.api.Disposable;
+import ir.hanzodev1375.ghostide.plugin.api.GhostPlugin;
+import ir.hanzodev1375.ghostide.plugin.api.PluginContext;
+
+public final class SampleToolbarIcon implements GhostPlugin {
+
+  private EditorPanel panel = new MyPanel();
+
+  @Override
+  public void activate(PluginContext context) {
+    Context android =
+        context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+
+    // ایکون از assets/icon.png بارگذاری شده (یا android.getDrawable(R.drawable.icon)).
+    Drawable icon;
+    try {
+      java.io.InputStream in = android.getAssets().open("icon.png");
+      icon = new BitmapDrawable(android.getResources(), BitmapFactory.decodeStream(in));
+      in.close();
+    } catch (java.io.IOException e) {
+      icon = null; // بدون ایکون هم می‌ماند و کلیک‌پذیر است
+    }
+
+    Disposable d =
+        PluginIcons.setPluginShowState(
+            context,
+            PluginIconState.Editor,   // FileES = نوار ابزار فایل‌منیجر
+            "Run my tool",
+            v -> openPanel(context),  // اکشن واقعی
+            icon);
+    context.registerDisposable(d);
+  }
+
+  private void openPanel(PluginContext context) {
+    // دقیقاً مثل لمس پنل در پاپ‌آپ اجرا می‌کند (بدون پاپ‌آپ).
+    PanelHostService host = context.getServices().get(IdeHostServices.PANEL_HOST);
+    if (host != null) host.showPanel(panel);
+  }
+}`
+                },
+                { type: 'p', text: 'ثبت‌نام به‌صورت خودکار توسط کانتکست پلاگین ردیابی می‌شود، پس unload کردن پلاگین ایکون را هم حذف می‌کند. `Disposable` برگردانده‌شده را فقط اگر خواستی زودتر ایکون را مخفی کنی نگه دار.' },
+                { type: 'note', variant: 'tip', text: 'برای تولید خودکار id یکتا `null` بده، یا برای چند ایکون از یک پلاگین یک `itemId` صریح پاس بده.' }
+            ]
+        },
+
+        'sample-file-click': {
+            title: 'تصاحب کلیک فایل (SVG → PNG)',
+            filename: 'SampleSvgClick.java',
+            module: 'ide-ui-api',
+            dek: 'تک‌ضربه روی فایل‌های `.svg` در فایل‌منیجر را تصاحب کن، مسیر را بخوان، و قبل از تبدیل از کاربر بپرس — IDE دیگر viewer خودش را برای آن ضربه باز نمی‌کند.',
+            blocks: [
+                { type: 'p', text: '`FileClickHandler` را پیاده کن و در `PluginUiExtensionPoints.FILE_CLICK_HANDLER` ثبتش کن. `supports(...)` تعیین می‌کند کدام ضربه‌ها مال تو هستند؛ `onFileClick(...)` یک `FileClickContext` با مسیر، فایل، Context میزبان و ویوی ردیف لمس‌شده می‌گیرد. برای هر ضربه‌ای که تصاحب کنی، باز شدن داخلی skip می‌شود.' },
+                {
+                    type: 'code', filename: 'click/SampleSvgClick.java', lang: 'java', code:
+                        `package com.example.samplekit.click;
+
+import ir.hanzodev1375.ghostide.ide.ui.api.FileClickContext;
+import ir.hanzodev1375.ghostide.ide.ui.api.FileClickHandler;
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.ide.ui.api.UiFeedbackHost;
+import ir.hanzodev1375.ghostide.plugin.api.PluginContext;
+
+public final class SampleSvgClick implements FileClickHandler {
+
+  private final UiFeedbackHost ui;
+
+  public SampleSvgClick(PluginContext context) {
+    this.ui = context.getServices().require(IdeHostServices.UI_FEEDBACK);
+  }
+
+  // برای هر ضربه اجرا می‌شود: خالص و سریع نگهش دار، اینجا I/O دیسکی نکن.
+  @Override
+  public boolean supports(String path, String name, boolean isDirectory) {
+    return !isDirectory && name.toLowerCase().endsWith(".svg");
+  }
+
+  @Override
+  public void onFileClick(FileClickContext context) {
+    ui.confirm(
+        "تبدیل به PNG؟",
+        context.name(),
+        ok -> {
+          if (!ok) return;
+          // context.file() = java.io.File، context.path() = مسیر مطلق
+          convert(context);
+        });
+  }
+
+  private void convert(FileClickContext context) {
+    new Thread(
+            () -> {
+              // ... context.file() را به یک .png کنارش رستر کن ...
+              // بعد اگر خواستی toast نشان بدهی به ترد UI برگرد:
+              ui.toast("انجام شد: " + context.name());
+            })
+        .start();
+  }
+}`
+                },
+                { type: 'h2', text: 'ثبت‌نام' },
+                {
+                    type: 'code', filename: 'SampleKitPlugin.java', lang: 'java', code:
+                        `import ir.hanzodev1375.ghostide.ide.ui.api.PluginUiExtensionPoints;
+
+@Override
+public void activate(PluginContext context) {
+  context.registerDisposable(
+      context.getExtensions().register(
+          PluginUiExtensionPoints.FILE_CLICK_HANDLER,
+          new SampleSvgClick(context)));
+}`
+                },
+                { type: 'note', variant: 'info', text: 'اگر می‌خواهی IDE همچنان فایل را باز کند و تو فقط یک آیتم *اضافه* کنی، به‌جای تصاحب ضربه از ردیف action داخلی / منو استفاده کن. برگرداندن `false` از `supports` برای مسیرهایی که مال تو نیستند باعث می‌شود هندلرها تمیز با هم ترکیب شوند — اولین `true` به ترتیب اولویت برنده است.' }
             ]
         },
 

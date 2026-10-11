@@ -45,6 +45,8 @@ var CONTENT_EN = {
       'ide-events': 'IdeEvents / FileEvent',
       'plugin-screen': 'PluginScreen',
       'file-icon-contributor': 'FileIconContributor',
+      'toolbar-icon': 'Toolbar Icon',
+      'file-click-handler': 'FileClickHandler',
       'gpl-format': '.gpl Format',
       'build-plugin': 'Building a Plugin',
       'loading-lifecycle': 'Loading Lifecycle',
@@ -61,7 +63,7 @@ var CONTENT_EN = {
     ctaSecondary: 'GitHub repo',
     stats: [
       { value: '3', label: 'independent API modules' },
-      { value: '7', label: 'ready-made extension points' },
+      { value: '10', label: 'ready-made extension points' },
       { value: 'Java 17', label: 'language & version' }
     ],
     mock: {
@@ -125,7 +127,7 @@ var CONTENT_EN = {
         { type: 'modulemap', items: [
           { name: 'plugin-api', desc: 'The plugin model itself: PluginContext, ExtensionPoint/Registry, ServiceKey/Registry, GlobalRegistry.' },
           { name: 'ide-api', desc: 'Depends on plugin-api. The LSP_SERVER_PROVIDER extension point for adding a language server.' },
-          { name: 'ide-ui-api', desc: 'Depends on plugin-api. The PLUGIN_SCREEN / EDITOR_PANEL / FILE_PANEL / EDITOR_ACTION_HANDLER extension points plus the EditorHost, FileManagerHost and CodeRunnerHost services.' }
+          { name: 'ide-ui-api', desc: 'Depends on plugin-api. The PLUGIN_SCREEN / EDITOR_PANEL / FILE_PANEL / EDITOR_ACTION_HANDLER / FILE_ICON_CONTRIBUTOR / TOOLBAR_ICON / FILE_CLICK_HANDLER extension points plus the EditorHost, FileManagerHost, CodeRunnerHost and PanelHostService services.' }
         ] },
         { type: 'p', text: 'The `:app` module (the app itself) depends on all three, and is the only place where the real registry implementations (`DefaultExtensionRegistry`, `DefaultServiceRegistry`) and the plugin loader (`GplPluginLoader`) actually live. Plugin code never talks to `:app`\u2019s internal classes directly \u2014 only to the `plugin-api`/`ide-api`/`ide-ui-api` interfaces.' },
         { type: 'h2', text: 'Two shared registries' },
@@ -425,7 +427,7 @@ storage.putString("lastPath", "/sdcard/Project/main.py");` },
       module: 'plugin-api',
       dek: 'The contract a group of registered capabilities must implement.',
       blocks: [
-        { type: 'p', text: 'A simple `record` holding a unique id and the `Class` type every registration must implement. The platform ships with eight extension points today:' },
+        { type: 'p', text: 'A simple `record` holding a unique id and the `Class` type every registration must implement. The platform ships with these extension points today:' },
         { type: 'table', headers: ['Extension point', 'Type', 'Module'], rows: [
           ['`EditorExtensionPoints.LSP_SERVER_PROVIDER`', '`LspServerProvider`', '`ide-api`'],
           ['`PluginUiExtensionPoints.PLUGIN_SCREEN`', '`PluginScreen`', '`ide-ui-api`'],
@@ -433,6 +435,8 @@ storage.putString("lastPath", "/sdcard/Project/main.py");` },
           ['`PluginUiExtensionPoints.FILE_PANEL`', '`FilePanel`', '`ide-ui-api`'],
           ['`PluginUiExtensionPoints.EDITOR_ACTION_HANDLER`', '`EditorActionHandler`', '`ide-ui-api`'],
           ['`PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR`', '`FileIconContributor`', '`ide-ui-api`'],
+          ['`PluginUiExtensionPoints.TOOLBAR_ICON`', '`PluginToolbarIcon`', '`ide-ui-api`'],
+          ['`PluginUiExtensionPoints.FILE_CLICK_HANDLER`', '`FileClickHandler`', '`ide-ui-api`'],
           ['`IdeEvents.FILE_EVENT`', '`FileEventListener`', '`ide-ui-api`'],
           ['`CoreExtensionPoints.PLUGIN_COMMAND`', '`PluginCommand`', '`plugin-api`']
         ] },
@@ -448,7 +452,7 @@ storage.putString("lastPath", "/sdcard/Project/main.py");` },
     }
   }
 }` },
-        { type: 'p', text: 'For details on each, see [LspServerProvider](#/lsp/lsp-server-provider), [PluginScreen](#/ui/plugin-screen), [EditorPanel](#/ui/editor-panel), [FilePanel](#/ui/file-panel) or [EditorActionHandler](#/ui/editor-action-handler).' }
+        { type: 'p', text: 'For details on each, see [LspServerProvider](#/lsp/lsp-server-provider), [PluginScreen](#/ui/plugin-screen), [EditorPanel](#/ui/editor-panel), [FilePanel](#/ui/file-panel), [EditorActionHandler](#/ui/editor-action-handler), [FileIconContributor](#/ui/file-icon-contributor), [Toolbar Icon](#/ui/toolbar-icon) or [FileClickHandler](#/ui/file-click-handler).' }
       ]
     },
 
@@ -787,7 +791,7 @@ public interface LspServerConnectionFactory {
       blocks: [
         { type: 'p', text: '`ide-ui-api` is an Android library (namespace: `ir.hanzodev1375.ghostide.ide.ui.api`, `minSdk 26`, `compileSdk 36`) that builds on `plugin-api` and `androidx.appcompat`.' },
         { type: 'note', variant: 'info', text: 'Android doesn\u2019t let dynamically loaded code declare a new `<activity>` in the host\u2019s manifest. That\u2019s why a plugin\u2019s \u201cscreen\u201d is actually a `Fragment`, not an Activity \u2014 the same technique Android plugin frameworks commonly use. The host app has a single screen-hosting Activity that displays this Fragment.' },
-        { type: 'p', text: 'To add a screen, see the [PluginScreen](#/ui/plugin-screen) interface. To slide a panel inside the running editor, see [EditorPanel](#/ui/editor-panel); to slide one inside the file manager, see [FilePanel](#/ui/file-panel). To reach the open editor or file manager, see [EditorHost](#/ui/editor-host) and [FileManagerHost](#/ui/file-manager-host). To run code or a shell command, see [CodeRunnerHost](#/ui/code-runner-host). To intercept your language server\u2019s commands locally, see [EditorActionHandler](#/ui/editor-action-handler).' }
+        { type: 'p', text: 'To add a screen, see the [PluginScreen](#/ui/plugin-screen) interface. To slide a panel inside the running editor, see [EditorPanel](#/ui/editor-panel); to slide one inside the file manager, see [FilePanel](#/ui/file-panel). To reach the open editor or file manager, see [EditorHost](#/ui/editor-host) and [FileManagerHost](#/ui/file-manager-host). To run code or a shell command, see [CodeRunnerHost](#/ui/code-runner-host). To intercept your language server\u2019s commands locally, see [EditorActionHandler](#/ui/editor-action-handler). To pin an action to a toolbar or to take over a file tap with your own format, see [Toolbar Icon](#/ui/toolbar-icon) and [FileClickHandler](#/ui/file-click-handler).' }
       ]
     },
 
@@ -1239,6 +1243,121 @@ ui.promptInput("Project name", "my-app", name -> {
         { type: 'h2', text: 'Priority between icon packs' },
         { type: 'p', text: 'Several icon plugins can be active at once. The **newest installed** plugin is queried first \u2014 its priority is derived from the `.gpl` install time and survives restarts. The first non-null answer wins per path, so a newer pack overrides older packs on the keys it declares and falls back to them \u2014 and finally to the built-in set \u2014 everywhere else. Unloading a plugin removes its contributions automatically.' },
         { type: 'note', variant: 'tip', text: 'To reuse the built-in artwork, point a mapping at any existing icon name (for example `file_type_kotlin`). Ship your own SVGs under `asset_dir` only for icons the built-in set does not have.' }
+      ]
+    },
+
+    'toolbar-icon': {
+      title: 'Toolbar Icon',
+      filename: 'PluginIcons.java',
+      module: 'ide-ui-api',
+      dek: 'A persistent action pinned next to the IDE\u2019s own toolbar icons \u2014 one tap runs your panel, no popup needed.',
+      blocks: [
+        { type: 'p', text: '`PluginIcons.setPluginShowState(context, state, title, onClick, icon)` registers a `PluginToolbarIcon` at `PluginUiExtensionPoints.TOOLBAR_ICON`. `PluginIconState.Editor` pins it to the **editor** toolbar, `PluginIconState.FileES` to the **file manager** toolbar. The icon can be a resource (`R.drawable.*`) or a drawable built from your plugin assets (e.g. a `BitmapDrawable` from a PNG).' },
+        { type: 'code', filename: 'PluginIcons.java', lang: 'java', code:
+`public final class PluginIcons {
+
+  public static Disposable setPluginShowState(
+      PluginContext context, PluginIconState state,
+      String title, View.OnClickListener onClick, Drawable icon) {
+
+    String pluginId = context.getDescriptor().getId();
+    String resolvedId = pluginId + "#" + state.name();
+
+    PluginToolbarIcon toolbarIcon = new PluginToolbarIcon() {
+      @Override public String getId()    { return resolvedId; }
+      @Override public String getTitle() { return title; }
+      @Override public PluginIconState getState() { return state; }
+      @Override public Drawable getIcon() { return icon; }
+      @Override public void onClick(View anchor) { onClick.onClick(anchor); }
+    };
+
+    Disposable registration =
+        context.getExtensions().register(
+            PluginUiExtensionPoints.TOOLBAR_ICON, toolbarIcon);
+    context.registerDisposable(registration);
+    return registration;
+  }
+}` },
+        { type: 'h2', text: 'Running your panel from the icon' },
+        { type: 'p', text: 'A toolbar tap is just like tapping the plugin in the popup, except it never opens the popup. Look up the host\u2019s `PanelHostService` (`IdeHostServices.PANEL_HOST`) and call `showPanel(yourPanel)`; the host renders it in its registered display mode (side sheet, dialog, floating window, ...).' },
+        { type: 'code', filename: 'MyPlugin.java', lang: 'java', code:
+`Context android =
+    context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+Drawable icon = android.getDrawable(R.drawable.ic_my_tool);
+
+context.getExtensions().register(
+    PluginUiExtensionPoints.TOOLBAR_ICON,
+    new ToolbarIcon(
+        "my.tool",
+        PluginIconState.Editor,
+        "My Tool",
+        icon,
+        v -> {
+          PanelHostService panelHost =
+              context.getServices().get(IdeHostServices.PANEL_HOST);
+          if (panelHost != null) panelHost.showPanel(myPanel);
+        }));` },
+        { type: 'note', variant: 'tip', text: 'Several icons from the same plugin are fine: the api\u2019s `itemId` param (or your own `PluginToolbarIcon` ids) keeps each one unique so taps always reach the right action. Unloading the plugin removes its icons automatically.' }
+      ]
+    },
+
+    'file-click-handler': {
+      title: 'FileClickHandler',
+      filename: 'FileClickHandler.java',
+      module: 'ide-ui-api',
+      dek: 'Take over a single tap on a file in the file manager and show your own UI \u2014 perfect for your own formats (SVG \u2192 PNG, archives, custom project files).',
+      blocks: [
+        { type: 'p', text: 'Implement `FileClickHandler` and register it at `PluginUiExtensionPoints.FILE_CLICK_HANDLER`. On every tap in the file manager the host asks each handler, in descending priority order, `supports(path, name, isDirectory)`; the first one returning `true` wins, receives a `FileClickContext`, and the built-in opening (editor, image/audio viewer, apk install, ...) is **skipped** for that tap. Returning `false` \u2014 or not registering at all \u2014 leaves the IDE\u2019s own behaviour untouched.' },
+        { type: 'code', filename: 'FileClickHandler.java', lang: 'java', code:
+`public interface FileClickHandler {
+
+  boolean supports(String path, String name, boolean isDirectory);
+
+  void onFileClick(FileClickContext context);
+}` },
+        { type: 'h2', text: 'What you get: FileClickContext' },
+        { type: 'table', headers: ['Accessor', 'Meaning'], rows: [
+          ['`context()`', 'The host `Context`; use it to show dialogs or start activities.'],
+          ['`path()`', 'Absolute path of the tapped file or directory.'],
+          ['`name()`', 'Display name of the tapped entry.'],
+          ['`file()`', 'The tapped path as a `java.io.File`.'],
+          ['`isDirectory()`', '`true` when the tapped entry is a directory.'],
+          ['`anchor()`', 'The tapped row `View`, for a shared-element transition or popup anchor (may be `null`).']
+        ] },
+        { type: 'h2', text: 'Example: SVG \u2192 PNG' },
+        { type: 'code', filename: 'SvgHandler.java', lang: 'java', code:
+`public final class SvgHandler implements FileClickHandler {
+
+  private final UiFeedbackHost ui;
+
+  public SvgHandler(PluginContext context) {
+    ui = context.getServices().require(IdeHostServices.UI_FEEDBACK);
+  }
+
+  @Override
+  public boolean supports(String path, String name, boolean isDirectory) {
+    return !isDirectory && name.toLowerCase().endsWith(".svg");
+  }
+
+  @Override
+  public void onFileClick(FileClickContext context) {
+    ui.confirm(
+        "Convert to PNG?",
+        context.path(),
+        ok -> {
+          if (ok) convert(context.file());
+        });
+  }
+}` },
+        { type: 'code', filename: 'MyPlugin.java', lang: 'java', code:
+`public void activate(PluginContext context) {
+  context.registerDisposable(
+      context.getExtensions().register(
+          PluginUiExtensionPoints.FILE_CLICK_HANDLER,
+          new SvgHandler(context)));
+}` },
+        { type: 'note', variant: 'warn', text: 'Keep `supports` fast: it runs on the UI thread for every tap, so decide with the already-passed `path` / `name` / `isDirectory` and do **no** disk I/O there. Do the real work inside `onFileClick`, and move anything heavy to a background thread.' },
+        { type: 'note', variant: 'info', text: 'A handler that throws from `onFileClick` is skipped and the tap falls through to the built-in flow, so a broken plugin can never block the file manager. Contribution is cleaned up automatically when the plugin unloads.' }
       ]
     },
 

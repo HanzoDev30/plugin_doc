@@ -4,7 +4,7 @@ Developer documentation for building Ghost IDE plugins — the three-module API 
 
 - Repository: https://github.com/HanzoDev1375/GhostIdes
 - Version: plugin-api 0.1.0
-- Pages: 51
+- Pages: 55
 - Generated from the real module source (no build step).
 
 # Table of contents
@@ -54,6 +54,8 @@ Developer documentation for building Ghost IDE plugins — the three-module API 
 - IdeEvents / FileEvent — `ide-events` (ide-ui-api)
 - PluginScreen — `plugin-screen` (ide-ui-api)
 - FileIconContributor — `file-icon-contributor` (ide-ui-api)
+- Toolbar Icon — `toolbar-icon` (ide-ui-api)
+- FileClickHandler — `file-click-handler` (ide-ui-api)
 
 ## Packaging (.gpl)
 - .gpl Format — `gpl-format` (gpl runtime)
@@ -74,6 +76,8 @@ Developer documentation for building Ghost IDE plugins — the three-module API 
 - Storage (PluginStorage) — `sample-storage` (plugin-api)
 - Listening to file events — `sample-events` (ide-ui-api)
 - Custom file icons — `sample-icons` (ide-ui-api)
+- Toolbar icon (one-tap action) — `sample-toolbar` (ide-ui-api)
+- Taking over a file click (SVG → PNG) — `sample-file-click` (ide-ui-api)
 - Adding a language server — `sample-lsp` (ide-api)
 - Feedback and host services — `sample-feedback` (ide-ui-api)
 - Building and packaging .gpl — `sample-build`
@@ -116,7 +120,7 @@ The module map, the extension/service registries, and where plugin code ends and
 
 - **plugin-api** — The plugin model itself: PluginContext, ExtensionPoint/Registry, ServiceKey/Registry, GlobalRegistry.
 - **ide-api** — Depends on plugin-api. The LSP_SERVER_PROVIDER extension point for adding a language server.
-- **ide-ui-api** — Depends on plugin-api. The PLUGIN_SCREEN / EDITOR_PANEL / FILE_PANEL / EDITOR_ACTION_HANDLER extension points plus the EditorHost, FileManagerHost and CodeRunnerHost services.
+- **ide-ui-api** — Depends on plugin-api. The PLUGIN_SCREEN / EDITOR_PANEL / FILE_PANEL / EDITOR_ACTION_HANDLER / FILE_ICON_CONTRIBUTOR / TOOLBAR_ICON / FILE_CLICK_HANDLER extension points plus the EditorHost, FileManagerHost, CodeRunnerHost and PanelHostService services.
 
 The `:app` module (the app itself) depends on all three, and is the only place where the real registry implementations (`DefaultExtensionRegistry`, `DefaultServiceRegistry`) and the plugin loader (`GplPluginLoader`) actually live. Plugin code never talks to `:app`’s internal classes directly — only to the `plugin-api`/`ide-api`/`ide-ui-api` interfaces.
 
@@ -461,7 +465,7 @@ storage.putString("lastPath", "/sdcard/Project/main.py");
 
 The contract a group of registered capabilities must implement.
 
-A simple `record` holding a unique id and the `Class` type every registration must implement. The platform ships with eight extension points today:
+A simple `record` holding a unique id and the `Class` type every registration must implement. The platform ships with these extension points today:
 
 | Extension point | Type | Module |
 | --- | --- | --- |
@@ -471,6 +475,8 @@ A simple `record` holding a unique id and the `Class` type every registration mu
 | `PluginUiExtensionPoints.FILE_PANEL` | `FilePanel` | `ide-ui-api` |
 | `PluginUiExtensionPoints.EDITOR_ACTION_HANDLER` | `EditorActionHandler` | `ide-ui-api` |
 | `PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR` | `FileIconContributor` | `ide-ui-api` |
+| `PluginUiExtensionPoints.TOOLBAR_ICON` | `PluginToolbarIcon` | `ide-ui-api` |
+| `PluginUiExtensionPoints.FILE_CLICK_HANDLER` | `FileClickHandler` | `ide-ui-api` |
 | `IdeEvents.FILE_EVENT` | `FileEventListener` | `ide-ui-api` |
 | `CoreExtensionPoints.PLUGIN_COMMAND` | `PluginCommand` | `plugin-api` |
 
@@ -488,7 +494,7 @@ public record ExtensionPoint<T>(String id, Class<T> type) {
 }
 ```
 
-For details on each, see LspServerProvider, PluginScreen, EditorPanel, FilePanel or EditorActionHandler.
+For details on each, see LspServerProvider, PluginScreen, EditorPanel, FilePanel, EditorActionHandler, FileIconContributor, Toolbar Icon or FileClickHandler.
 
 
 ---
@@ -879,7 +885,7 @@ The extension point and services for adding UI and reaching the host.
 
 > **[INFO]** Android doesn’t let dynamically loaded code declare a new `<activity>` in the host’s manifest. That’s why a plugin’s “screen” is actually a `Fragment`, not an Activity — the same technique Android plugin frameworks commonly use. The host app has a single screen-hosting Activity that displays this Fragment.
 
-To add a screen, see the PluginScreen interface. To slide a panel inside the running editor, see EditorPanel; to slide one inside the file manager, see FilePanel. To reach the open editor or file manager, see EditorHost and FileManagerHost. To run code or a shell command, see CodeRunnerHost. To intercept your language server’s commands locally, see EditorActionHandler.
+To add a screen, see the PluginScreen interface. To slide a panel inside the running editor, see EditorPanel; to slide one inside the file manager, see FilePanel. To reach the open editor or file manager, see EditorHost and FileManagerHost. To run code or a shell command, see CodeRunnerHost. To intercept your language server’s commands locally, see EditorActionHandler. To pin an action to a toolbar or to take over a file tap with your own format, see Toolbar Icon and FileClickHandler.
 
 
 ---
@@ -1417,6 +1423,139 @@ public void activate(PluginContext context) {
 Several icon plugins can be active at once. The **newest installed** plugin is queried first — its priority is derived from the `.gpl` install time and survives restarts. The first non-null answer wins per path, so a newer pack overrides older packs on the keys it declares and falls back to them — and finally to the built-in set — everywhere else. Unloading a plugin removes its contributions automatically.
 
 > **[TIP]** To reuse the built-in artwork, point a mapping at any existing icon name (for example `file_type_kotlin`). Ship your own SVGs under `asset_dir` only for icons the built-in set does not have.
+
+
+---
+
+# Toolbar Icon
+> Group: UI Integration · File: PluginIcons.java · Module: ide-ui-api
+
+A persistent action pinned next to the IDE’s own toolbar icons — one tap runs your panel, no popup needed.
+
+`PluginIcons.setPluginShowState(context, state, title, onClick, icon)` registers a `PluginToolbarIcon` at `PluginUiExtensionPoints.TOOLBAR_ICON`. `PluginIconState.Editor` pins it to the **editor** toolbar, `PluginIconState.FileES` to the **file manager** toolbar. The icon can be a resource (`R.drawable.*`) or a drawable built from your plugin assets (e.g. a `BitmapDrawable` from a PNG).
+
+```java — PluginIcons.java
+public final class PluginIcons {
+
+  public static Disposable setPluginShowState(
+      PluginContext context, PluginIconState state,
+      String title, View.OnClickListener onClick, Drawable icon) {
+
+    String pluginId = context.getDescriptor().getId();
+    String resolvedId = pluginId + "#" + state.name();
+
+    PluginToolbarIcon toolbarIcon = new PluginToolbarIcon() {
+      @Override public String getId()    { return resolvedId; }
+      @Override public String getTitle() { return title; }
+      @Override public PluginIconState getState() { return state; }
+      @Override public Drawable getIcon() { return icon; }
+      @Override public void onClick(View anchor) { onClick.onClick(anchor); }
+    };
+
+    Disposable registration =
+        context.getExtensions().register(
+            PluginUiExtensionPoints.TOOLBAR_ICON, toolbarIcon);
+    context.registerDisposable(registration);
+    return registration;
+  }
+}
+```
+
+## Running your panel from the icon
+
+A toolbar tap is just like tapping the plugin in the popup, except it never opens the popup. Look up the host’s `PanelHostService` (`IdeHostServices.PANEL_HOST`) and call `showPanel(yourPanel)`; the host renders it in its registered display mode (side sheet, dialog, floating window, ...).
+
+```java — MyPlugin.java
+Context android =
+    context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+Drawable icon = android.getDrawable(R.drawable.ic_my_tool);
+
+context.getExtensions().register(
+    PluginUiExtensionPoints.TOOLBAR_ICON,
+    new ToolbarIcon(
+        "my.tool",
+        PluginIconState.Editor,
+        "My Tool",
+        icon,
+        v -> {
+          PanelHostService panelHost =
+              context.getServices().get(IdeHostServices.PANEL_HOST);
+          if (panelHost != null) panelHost.showPanel(myPanel);
+        }));
+```
+
+> **[TIP]** Several icons from the same plugin are fine: the api’s `itemId` param (or your own `PluginToolbarIcon` ids) keeps each one unique so taps always reach the right action. Unloading the plugin removes its icons automatically.
+
+
+---
+
+# FileClickHandler
+> Group: UI Integration · File: FileClickHandler.java · Module: ide-ui-api
+
+Take over a single tap on a file in the file manager and show your own UI — perfect for your own formats (SVG → PNG, archives, custom project files).
+
+Implement `FileClickHandler` and register it at `PluginUiExtensionPoints.FILE_CLICK_HANDLER`. On every tap in the file manager the host asks each handler, in descending priority order, `supports(path, name, isDirectory)`; the first one returning `true` wins, receives a `FileClickContext`, and the built-in opening (editor, image/audio viewer, apk install, ...) is **skipped** for that tap. Returning `false` — or not registering at all — leaves the IDE’s own behaviour untouched.
+
+```java — FileClickHandler.java
+public interface FileClickHandler {
+
+  boolean supports(String path, String name, boolean isDirectory);
+
+  void onFileClick(FileClickContext context);
+}
+```
+
+## What you get: FileClickContext
+
+| Accessor | Meaning |
+| --- | --- |
+| `context()` | The host `Context`; use it to show dialogs or start activities. |
+| `path()` | Absolute path of the tapped file or directory. |
+| `name()` | Display name of the tapped entry. |
+| `file()` | The tapped path as a `java.io.File`. |
+| `isDirectory()` | `true` when the tapped entry is a directory. |
+| `anchor()` | The tapped row `View`, for a shared-element transition or popup anchor (may be `null`). |
+
+## Example: SVG → PNG
+
+```java — SvgHandler.java
+public final class SvgHandler implements FileClickHandler {
+
+  private final UiFeedbackHost ui;
+
+  public SvgHandler(PluginContext context) {
+    ui = context.getServices().require(IdeHostServices.UI_FEEDBACK);
+  }
+
+  @Override
+  public boolean supports(String path, String name, boolean isDirectory) {
+    return !isDirectory && name.toLowerCase().endsWith(".svg");
+  }
+
+  @Override
+  public void onFileClick(FileClickContext context) {
+    ui.confirm(
+        "Convert to PNG?",
+        context.path(),
+        ok -> {
+          if (ok) convert(context.file());
+        });
+  }
+}
+```
+
+```java — MyPlugin.java
+public void activate(PluginContext context) {
+  context.registerDisposable(
+      context.getExtensions().register(
+          PluginUiExtensionPoints.FILE_CLICK_HANDLER,
+          new SvgHandler(context)));
+}
+```
+
+> **[WARN]** Keep `supports` fast: it runs on the UI thread for every tap, so decide with the already-passed `path` / `name` / `isDirectory` and do **no** disk I/O there. Do the real work inside `onFileClick`, and move anything heavy to a background thread.
+
+> **[INFO]** A handler that throws from `onFileClick` is skipped and the tap falls through to the built-in flow, so a broken plugin can never block the file manager. Contribution is cleaned up automatically when the plugin unloads.
 
 
 ---
@@ -2432,6 +2571,147 @@ public final class SampleIcons implements FileIconContributor {
 ```
 
 > **[TIP]** If you only need a couple of extensions, implement `FileIconContributor` directly and return a drawable name or path based on `filePath`.
+
+
+---
+
+# Toolbar icon (one-tap action)
+> Group: Samples · File: SampleToolbarIcon.java · Module: ide-ui-api
+
+Put a persistent action next to the IDE’s own toolbar icons — editor or file manager — and run your panel with one tap instead of opening the popup.
+
+`PluginIcons.setPluginShowState(context, state, title, onClick, icon)` registers a `PluginToolbarIcon` at `PluginUiExtensionPoints.TOOLBAR_ICON` for you. `PluginIconState.Editor` puts it in the **editor** toolbar, `PluginIconState.FileES` in the **file manager** toolbar. The icon can come from `R.drawable.*` or straight from your plugin assets — like a PNG `BitmapDrawable` as below.
+
+```java — SampleToolbarIcon.java
+package com.example.samplekit;
+
+import android.content.Context;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.view.View;
+
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.ide.ui.api.PluginIconState;
+import ir.hanzodev1375.ghostide.ide.ui.api.PluginIcons;
+import ir.hanzodev1375.ghostide.ide.ui.api.PanelHostService;
+import ir.hanzodev1375.ghostide.plugin.api.Disposable;
+import ir.hanzodev1375.ghostide.plugin.api.GhostPlugin;
+import ir.hanzodev1375.ghostide.plugin.api.PluginContext;
+
+public final class SampleToolbarIcon implements GhostPlugin {
+
+  private EditorPanel panel = new MyPanel();
+
+  @Override
+  public void activate(PluginContext context) {
+    Context android =
+        context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+
+    // Icon loaded from assets/icon.png (or use android.getDrawable(R.drawable.icon)).
+    Drawable icon;
+    try {
+      java.io.InputStream in = android.getAssets().open("icon.png");
+      icon = new BitmapDrawable(android.getResources(), BitmapFactory.decodeStream(in));
+      in.close();
+    } catch (java.io.IOException e) {
+      icon = null; // icon-less item still shows, clickable
+    }
+
+    Disposable d =
+        PluginIcons.setPluginShowState(
+            context,
+            PluginIconState.Editor,   // FileES = file manager toolbar
+            "Run my tool",
+            v -> openPanel(context),  // the real action
+            icon);
+    context.registerDisposable(d);
+  }
+
+  private void openPanel(PluginContext context) {
+    // Runs the panel exactly like tapping it in the plugin popup (no popup needed).
+    PanelHostService host = context.getServices().get(IdeHostServices.PANEL_HOST);
+    if (host != null) host.showPanel(panel);
+  }
+}
+```
+
+The registration is already tracked by the plugin context, so unloading the plugin removes the icon automatically. Keep the returned `Disposable` only if you need to hide the icon earlier.
+
+> **[TIP]** Pass `null` as `itemId` to auto-generate a unique id, or pass an explicit id to contribute several toolbar icons from the same plugin.
+
+
+---
+
+# Taking over a file click (SVG → PNG)
+> Group: Samples · File: SampleSvgClick.java · Module: ide-ui-api
+
+Claim a tap on `.svg` files in the file manager, read the path, and ask the user before converting — the IDE never opens its own viewer for the tap.
+
+Implement `FileClickHandler` and register it at `PluginUiExtensionPoints.FILE_CLICK_HANDLER`. `supports(...)` decides which taps you own; `onFileClick(...)` receives a `FileClickContext` with the path, the file, the host `Context` and the tapped row `View`. The built-in open is skipped for any tap you claim.
+
+```java — click/SampleSvgClick.java
+package com.example.samplekit.click;
+
+import ir.hanzodev1375.ghostide.ide.ui.api.FileClickContext;
+import ir.hanzodev1375.ghostide.ide.ui.api.FileClickHandler;
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.ide.ui.api.UiFeedbackHost;
+import ir.hanzodev1375.ghostide.plugin.api.PluginContext;
+
+public final class SampleSvgClick implements FileClickHandler {
+
+  private final UiFeedbackHost ui;
+
+  public SampleSvgClick(PluginContext context) {
+    this.ui = context.getServices().require(IdeHostServices.UI_FEEDBACK);
+  }
+
+  // Runs on every tap: keep it pure/fast, no disk I/O here.
+  @Override
+  public boolean supports(String path, String name, boolean isDirectory) {
+    return !isDirectory && name.toLowerCase().endsWith(".svg");
+  }
+
+  @Override
+  public void onFileClick(FileClickContext context) {
+    ui.confirm(
+        "Convert to PNG?",
+        context.name(),
+        ok -> {
+          if (!ok) return;
+          // context.file() = java.io.File, context.path() = absolute path
+          convert(context);
+        });
+  }
+
+  private void convert(FileClickContext context) {
+    new Thread(
+            () -> {
+              // ... rasterize context.file() to a .png next to it ...
+              // Then hop back to the UI thread if you want to show a toast:
+              ui.toast("Done: " + context.name());
+            })
+        .start();
+  }
+}
+```
+
+## Registration
+
+```java — SampleKitPlugin.java
+import ir.hanzodev1375.ghostide.ide.ui.api.PluginUiExtensionPoints;
+
+@Override
+public void activate(PluginContext context) {
+  context.registerDisposable(
+      context.getExtensions().register(
+          PluginUiExtensionPoints.FILE_CLICK_HANDLER,
+          new SampleSvgClick(context)));
+}
+```
+
+> **[INFO]** To let the IDE keep opening the file and only *add* an entry, use the built-in action row / menu instead of claiming the tap. Returning `false` from `supports` for paths you do not own makes handlers compose cleanly — the first `true` in priority order wins.
 
 
 ---

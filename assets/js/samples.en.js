@@ -12,6 +12,8 @@ var SAMPLES_EN = {
         'sample-storage': 'Storage (PluginStorage)',
         'sample-events': 'Listening to file events',
         'sample-icons': 'Custom file icons',
+        'sample-toolbar': 'Toolbar icon (one-tap action)',
+        'sample-file-click': 'Taking over a file click (SVG \u2192 PNG)',
         'sample-lsp': 'Adding a language server',
         'sample-feedback': 'Feedback and host services',
         'sample-build': 'Building and packaging .gpl'
@@ -751,6 +753,142 @@ public final class SampleIcons implements FileIconContributor {
 }`
                 },
                 { type: 'note', variant: 'tip', text: 'If you only need a couple of extensions, implement `FileIconContributor` directly and return a drawable name or path based on `filePath`.' }
+            ]
+        },
+
+        'sample-toolbar': {
+            title: 'Toolbar icon (one-tap action)',
+            filename: 'SampleToolbarIcon.java',
+            module: 'ide-ui-api',
+            dek: 'Put a persistent action next to the IDE\u2019s own toolbar icons \u2014 editor or file manager \u2014 and run your panel with one tap instead of opening the popup.',
+            blocks: [
+                { type: 'p', text: '`PluginIcons.setPluginShowState(context, state, title, onClick, icon)` registers a `PluginToolbarIcon` at `PluginUiExtensionPoints.TOOLBAR_ICON` for you. `PluginIconState.Editor` puts it in the **editor** toolbar, `PluginIconState.FileES` in the **file manager** toolbar. The icon can come from `R.drawable.*` or straight from your plugin assets \u2014 like a PNG `BitmapDrawable` as below.' },
+                { type: 'code', filename: 'SampleToolbarIcon.java', lang: 'java', code:
+`package com.example.samplekit;
+
+import android.content.Context;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.view.View;
+
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.ide.ui.api.PluginIconState;
+import ir.hanzodev1375.ghostide.ide.ui.api.PluginIcons;
+import ir.hanzodev1375.ghostide.ide.ui.api.PanelHostService;
+import ir.hanzodev1375.ghostide.plugin.api.Disposable;
+import ir.hanzodev1375.ghostide.plugin.api.GhostPlugin;
+import ir.hanzodev1375.ghostide.plugin.api.PluginContext;
+
+public final class SampleToolbarIcon implements GhostPlugin {
+
+  private EditorPanel panel = new MyPanel();
+
+  @Override
+  public void activate(PluginContext context) {
+    Context android =
+        context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+
+    // Icon loaded from assets/icon.png (or use android.getDrawable(R.drawable.icon)).
+    Drawable icon;
+    try {
+      java.io.InputStream in = android.getAssets().open("icon.png");
+      icon = new BitmapDrawable(android.getResources(), BitmapFactory.decodeStream(in));
+      in.close();
+    } catch (java.io.IOException e) {
+      icon = null; // icon-less item still shows, clickable
+    }
+
+    Disposable d =
+        PluginIcons.setPluginShowState(
+            context,
+            PluginIconState.Editor,   // FileES = file manager toolbar
+            "Run my tool",
+            v -> openPanel(context),  // the real action
+            icon);
+    context.registerDisposable(d);
+  }
+
+  private void openPanel(PluginContext context) {
+    // Runs the panel exactly like tapping it in the plugin popup (no popup needed).
+    PanelHostService host = context.getServices().get(IdeHostServices.PANEL_HOST);
+    if (host != null) host.showPanel(panel);
+  }
+}`
+                },
+                { type: 'p', text: 'The registration is already tracked by the plugin context, so unloading the plugin removes the icon automatically. Keep the returned `Disposable` only if you need to hide the icon earlier.' },
+                { type: 'note', variant: 'tip', text: 'Pass `null` as `itemId` to auto-generate a unique id, or pass an explicit id to contribute several toolbar icons from the same plugin.' }
+            ]
+        },
+
+        'sample-file-click': {
+            title: 'Taking over a file click (SVG \u2192 PNG)',
+            filename: 'SampleSvgClick.java',
+            module: 'ide-ui-api',
+            dek: 'Claim a tap on `.svg` files in the file manager, read the path, and ask the user before converting \u2014 the IDE never opens its own viewer for the tap.',
+            blocks: [
+                { type: 'p', text: 'Implement `FileClickHandler` and register it at `PluginUiExtensionPoints.FILE_CLICK_HANDLER`. `supports(...)` decides which taps you own; `onFileClick(...)` receives a `FileClickContext` with the path, the file, the host `Context` and the tapped row `View`. The built-in open is skipped for any tap you claim.' },
+                {
+                    type: 'code', filename: 'click/SampleSvgClick.java', lang: 'java', code:
+`package com.example.samplekit.click;
+
+import ir.hanzodev1375.ghostide.ide.ui.api.FileClickContext;
+import ir.hanzodev1375.ghostide.ide.ui.api.FileClickHandler;
+import ir.hanzodev1375.ghostide.ide.ui.api.IdeHostServices;
+import ir.hanzodev1375.ghostide.ide.ui.api.UiFeedbackHost;
+import ir.hanzodev1375.ghostide.plugin.api.PluginContext;
+
+public final class SampleSvgClick implements FileClickHandler {
+
+  private final UiFeedbackHost ui;
+
+  public SampleSvgClick(PluginContext context) {
+    this.ui = context.getServices().require(IdeHostServices.UI_FEEDBACK);
+  }
+
+  // Runs on every tap: keep it pure/fast, no disk I/O here.
+  @Override
+  public boolean supports(String path, String name, boolean isDirectory) {
+    return !isDirectory && name.toLowerCase().endsWith(".svg");
+  }
+
+  @Override
+  public void onFileClick(FileClickContext context) {
+    ui.confirm(
+        "Convert to PNG?",
+        context.name(),
+        ok -> {
+          if (!ok) return;
+          // context.file() = java.io.File, context.path() = absolute path
+          convert(context);
+        });
+  }
+
+  private void convert(FileClickContext context) {
+    new Thread(
+            () -> {
+              // ... rasterize context.file() to a .png next to it ...
+              // Then hop back to the UI thread if you want to show a toast:
+              ui.toast("Done: " + context.name());
+            })
+        .start();
+  }
+}`
+                },
+                { type: 'h2', text: 'Registration' },
+                {
+                    type: 'code', filename: 'SampleKitPlugin.java', lang: 'java', code:
+`import ir.hanzodev1375.ghostide.ide.ui.api.PluginUiExtensionPoints;
+
+@Override
+public void activate(PluginContext context) {
+  context.registerDisposable(
+      context.getExtensions().register(
+          PluginUiExtensionPoints.FILE_CLICK_HANDLER,
+          new SampleSvgClick(context)));
+}`
+                },
+                { type: 'note', variant: 'info', text: 'To let the IDE keep opening the file and only *add* an entry, use the built-in action row / menu instead of claiming the tap. Returning `false` from `supports` for paths you do not own makes handlers compose cleanly \u2014 the first `true` in priority order wins.' }
             ]
         },
 

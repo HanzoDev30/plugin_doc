@@ -45,6 +45,8 @@ var CONTENT_FA = {
             'ide-events': 'IdeEvents / FileEvent',
             'plugin-screen': 'PluginScreen',
             'file-icon-contributor': 'FileIconContributor',
+            'toolbar-icon': 'نوار ابزار (Toolbar Icon)',
+            'file-click-handler': 'FileClickHandler',
             'gpl-format': 'فرمت .gpl',
             'build-plugin': 'ساخت پلاگین',
             'loading-lifecycle': 'چرخه‌ی بارگذاری',
@@ -62,7 +64,7 @@ var CONTENT_FA = {
         ctaSecondary: 'مخزن گیت‌هاب',
         stats: [
             { value: '۳', label: 'ماژول API مستقل' },
-            { value: '۷', label: 'اکستنشن‌پوینت آماده' },
+            { value: '۱۰', label: 'اکستنشن‌پوینت آماده' },
             { value: 'Java 17', label: 'زبان و نسخه' }
         ],
         mock: {
@@ -131,7 +133,7 @@ var CONTENT_FA = {
                     type: 'modulemap', items: [
                         { name: 'plugin-api', desc: 'مدل پلاگین، PluginContext، ExtensionPoint/Registry، ServiceKey/Registry، GlobalRegistry.' },
                         { name: 'ide-api', desc: 'وابسته به plugin-api. اکستنشن‌پوینت LSP_SERVER_PROVIDER برای افزودن Language Server.' },
-                        { name: 'ide-ui-api', desc: 'وابسته به plugin-api. اکستنشن‌پوینت‌های PLUGIN_SCREEN / EDITOR_PANEL / FILE_PANEL / EDITOR_ACTION_HANDLER و سرویس‌های EditorHost / FileManagerHost / CodeRunnerHost.' }
+                        { name: 'ide-ui-api', desc: 'وابسته به plugin-api. اکستنشن‌پوینت‌های PLUGIN_SCREEN / EDITOR_PANEL / FILE_PANEL / EDITOR_ACTION_HANDLER / FILE_ICON_CONTRIBUTOR / TOOLBAR_ICON / FILE_CLICK_HANDLER و سرویس‌های EditorHost / FileManagerHost / CodeRunnerHost / PanelHostService.' }
                     ]
                 },
                 { type: 'p', text: 'ماژول `:app` (خود اپ) به هر سه بستگی دارد و در واقع تنها جایی است که پیاده‌سازی واقعی رجیستری‌ها (`DefaultExtensionRegistry`, `DefaultServiceRegistry`) و بارگذار پلاگین (`GplPluginLoader`) در آن زندگی می‌کند. کد پلاگین هرگز مستقیم با کلاس‌های داخلی `:app` صحبت نمی‌کند — فقط با رابط‌های `plugin-api`/`ide-api`/`ide-ui-api`.' },
@@ -461,7 +463,7 @@ storage.putString("lastPath", "/sdcard/Project/main.py");` },
             module: 'plugin-api',
             dek: 'قراردادی که یک گروه از قابلیت‌های ثبت‌شده باید پیاده کنند.',
             blocks: [
-                { type: 'p', text: 'یک `record` ساده شامل شناسه‌ی یکتا و نوع (`Class`) قراردادی که هر ثبت‌کننده باید پیاده کند. خود این پلتفرم فعلاً هشت اکستنشن‌پوینت آماده دارد:' },
+                { type: 'p', text: 'یک `record` ساده شامل شناسه‌ی یکتا و نوع (`Class`) قراردادی که هر ثبت‌کننده باید پیاده کند. خود این پلتفرم فعلاً این اکستنشن‌پوینت‌ها را دارد:' },
                 {
                     type: 'table', headers: ['اکستنشن‌پوینت', 'نوع', 'ماژول'], rows: [
                         ['`EditorExtensionPoints.LSP_SERVER_PROVIDER`', '`LspServerProvider`', '`ide-api`'],
@@ -470,6 +472,8 @@ storage.putString("lastPath", "/sdcard/Project/main.py");` },
                         ['`PluginUiExtensionPoints.FILE_PANEL`', '`FilePanel`', '`ide-ui-api`'],
                         ['`PluginUiExtensionPoints.EDITOR_ACTION_HANDLER`', '`EditorActionHandler`', '`ide-ui-api`'],
                         ['`PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR`', '`FileIconContributor`', '`ide-ui-api`'],
+                        ['`PluginUiExtensionPoints.TOOLBAR_ICON`', '`PluginToolbarIcon`', '`ide-ui-api`'],
+                        ['`PluginUiExtensionPoints.FILE_CLICK_HANDLER`', '`FileClickHandler`', '`ide-ui-api`'],
                         ['`IdeEvents.FILE_EVENT`', '`FileEventListener`', '`ide-ui-api`'],
                         ['`CoreExtensionPoints.PLUGIN_COMMAND`', '`PluginCommand`', '`plugin-api`']
                     ]
@@ -487,7 +491,7 @@ storage.putString("lastPath", "/sdcard/Project/main.py");` },
     }
   }
 }` },
-                { type: 'p', text: 'برای جزئیات هر کدام، صفحه‌ی [LspServerProvider](#/lsp/lsp-server-provider)، [PluginScreen](#/ui/plugin-screen)، [EditorPanel](#/ui/editor-panel)، [FilePanel](#/ui/file-panel) یا [EditorActionHandler](#/ui/editor-action-handler) را ببین.' }
+                { type: 'p', text: 'برای جزئیات هر کدام، صفحه‌ی [LspServerProvider](#/lsp/lsp-server-provider)، [PluginScreen](#/ui/plugin-screen)، [EditorPanel](#/ui/editor-panel)، [FilePanel](#/ui/file-panel)، [EditorActionHandler](#/ui/editor-action-handler)، [FileIconContributor](#/ui/file-icon-contributor)، [Toolbar Icon](#/ui/toolbar-icon) یا [FileClickHandler](#/ui/file-click-handler) را ببین.' }
             ]
         },
 
@@ -850,7 +854,7 @@ public interface LspServerConnectionFactory {
             blocks: [
                 { type: 'p', text: '`ide-ui-api` یک کتابخانه‌ی اندرویدی است (namespace: `ir.hanzodev1375.ghostide.ide.ui.api`، `minSdk 26`، `compileSdk 36`) که روی `plugin-api` و `androidx.appcompat` سوار می‌شود.' },
                 { type: 'note', variant: 'info', text: 'اندروید اجازه نمی‌دهد کد بارگذاری‌شده در زمان اجرا یک `<activity>` تازه در مانیفست میزبان اعلام کند. به همین دلیل "صفحه" یک پلاگین در واقع یک `Fragment` است، نه یک Activity — همان تکنیکی که چارچوب‌های پلاگین اندرویدی معمولاً استفاده می‌کنند. اپ میزبان یک اکتیویتی میزبان‌کننده‌ی صفحه دارد که این Fragment را نمایش می‌دهد.' },
-                { type: 'p', text: 'برای افزودن یک صفحه، رابط [PluginScreen](#/ui/plugin-screen) را ببین. برای بازکردن پنل داخل ادیتورِ در حال اجرا، [EditorPanel](#/ui/editor-panel) را ببین؛ برای بازکردن پنل داخل فایل‌منیجر، [FilePanel](#/ui/file-panel) را ببین. برای دسترسی به ادیتور یا فایل‌منیجر باز، رابط‌های [EditorHost](#/ui/editor-host) و [FileManagerHost](#/ui/file-manager-host) را ببین. برای اجرای کد یا دستور شل، [CodeRunnerHost](#/ui/code-runner-host) را ببین. برای هندل محلی دستورهای سرور زبان، [EditorActionHandler](#/ui/editor-action-handler) را ببین.' }
+                { type: 'p', text: 'برای افزودن یک صفحه، رابط [PluginScreen](#/ui/plugin-screen) را ببین. برای بازکردن پنل داخل ادیتورِ در حال اجرا، [EditorPanel](#/ui/editor-panel) را ببین؛ برای بازکردن پنل داخل فایل‌منیجر، [FilePanel](#/ui/file-panel) را ببین. برای دسترسی به ادیتور یا فایل‌منیجر باز، رابط‌های [EditorHost](#/ui/editor-host) و [FileManagerHost](#/ui/file-manager-host) را ببین. برای اجرای کد یا دستور شل، [CodeRunnerHost](#/ui/code-runner-host) را ببین. برای هندل محلی دستورهای سرور زبان، [EditorActionHandler](#/ui/editor-action-handler) را ببین. برای پین کردن یک اکشن روی نوار ابزار یا تصاحب لمس یک فایل با فرمت خودت، [Toolbar Icon](#/ui/toolbar-icon) و [FileClickHandler](#/ui/file-click-handler) را ببین.' }
             ]
         },
 
@@ -1274,9 +1278,9 @@ ui.promptInput("اسم پروژه", "my-app", name -> {
             title: 'FileIconContributor',
             filename: 'FileIconContributor.java',
             module: 'ide-ui-api',
-            dek: 'آیکون فایل/پوشه‌ی داخلی را برای مسیرهایی که پلاگین تشخیص می‌دهد override می‌کند — از جمله کل آیکون‌پک‌ها.',
+            dek: 'ایکون فایل/پوشه‌ی داخلی را برای مسیرهایی که پلاگین تشخیص می‌دهد override می‌کند — از جمله کل ایکون‌پک‌ها.',
             blocks: [
-                { type: 'p', text: 'یک `FileIconContributor` را در `PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR` ثبت کن. برای هر آیکونی که در فایل منیجر، تب‌های ادیتور، تاریخچه و بوکمارک‌ها نمایش داده می‌شود، **قبل از** مجموعه‌ی داخلی `file_icons.json` از او پرسیده می‌شود. برای مسیرهایی که هندل نمی‌کنی `null` برگردان تا contributor بعدی — یا مجموعه‌ی داخلی — جواب بدهد.' },
+                { type: 'p', text: 'یک `FileIconContributor` را در `PluginUiExtensionPoints.FILE_ICON_CONTRIBUTOR` ثبت کن. برای هر ایکونی که در فایل منیجر، تب‌های ادیتور، تاریخچه و بوکمارک‌ها نمایش داده می‌شود، **قبل از** مجموعه‌ی داخلی `file_icons.json` از او پرسیده می‌شود. برای مسیرهایی که هندل نمی‌کنی `null` برگردان تا contributor بعدی — یا مجموعه‌ی داخلی — جواب بدهد.' },
                 {
                     type: 'code', filename: 'FileIconContributor.java', lang: 'java', code:
                         `public interface FileIconContributor {
@@ -1286,7 +1290,7 @@ ui.promptInput("اسم پروژه", "my-app", name -> {
                 {
                     type: 'table', headers: ['مقدار بازگشتی', 'معنی'], rows: [
                         ['`file://...`, `content://...`', 'یک URI کامل. برای آرت‌ورکی که داخل `.gpl` خودت داری؛ موقع `activate()` آن را به حافظه‌ی خصوصی کپی کن چون Glide نمی‌تواند asset پلاگین را از طریق `android_asset` باز کند.'],
-                        ['`file_type_kotlin`', 'یک نام آیکون ساده؛ به‌صورت `vscode_icons/<name>.svg` در assetهای میزبان حل می‌شود.'],
+                        ['`file_type_kotlin`', 'یک نام ایکون ساده؛ به‌صورت `vscode_icons/<name>.svg` در assetهای میزبان حل می‌شود.'],
                         ['`null` / خالی', 'این مسیر را هندل نمی‌کنی — به contributor بعدی و سپس مجموعه‌ی داخلی می‌رسد.']
                     ]
                 },
@@ -1333,9 +1337,132 @@ ui.promptInput("اسم پروژه", "my-app", name -> {
           new JsonFileIconContributor(pluginContext, "myicons.json")));
 }` },
                 { type: 'p', text: '`asset_dir` اختیاری است؛ نام‌هایی که به یک SVG داخلش اشاره کنند یک بار به حافظه‌ی خصوصی پلاگین استخراج و به‌صورت `file://` سرو می‌شوند، و نام‌های ناشناخته به مجموعه‌ی داخلی `vscode_icons` می‌رسند. `defaults` از `file`، `folder` و `root_folder` پشتیبانی می‌کند.' },
-                { type: 'h2', text: 'اولویت بین آیکون‌پک‌ها' },
-                { type: 'p', text: 'چند افزونه‌ی آیکون می‌توانند هم‌زمان فعال باشند. **جدیدترین پکی که نصب شده** اول پرسیده می‌شود — اولویتش از زمان نصب فایل `.gpl` گرفته می‌شود و بعد از ری‌استارت هم حفظ می‌شود. اولین جواب non-null برای هر مسیر برنده است، پس پک جدید روی کلیدهایی که تعریف می‌کند پک‌های قدیمی‌تر را override می‌کند و بقیه‌جاها به آن‌ها و در نهایت به مجموعه‌ی داخلی fallback می‌کند. با unload شدن پلاگین، contributionهایش خودکار حذف می‌شوند.' },
-                { type: 'note', variant: 'tip', text: 'برای استفاده از آرت‌ورک داخلی، یک مپ را به هر نام آیکون موجود اشاره بده (مثلاً `file_type_kotlin`). SVGهای خودت را فقط برای آیکون‌هایی که در مجموعه‌ی داخلی نیستند زیر `asset_dir` بگذار.' }
+                { type: 'h2', text: 'اولویت بین ایکون‌پک‌ها' },
+                { type: 'p', text: 'چند افزونه‌ی ایکون می‌توانند هم‌زمان فعال باشند. **جدیدترین پکی که نصب شده** اول پرسیده می‌شود — اولویتش از زمان نصب فایل `.gpl` گرفته می‌شود و بعد از ری‌استارت هم حفظ می‌شود. اولین جواب non-null برای هر مسیر برنده است، پس پک جدید روی کلیدهایی که تعریف می‌کند پک‌های قدیمی‌تر را override می‌کند و بقیه‌جاها به آن‌ها و در نهایت به مجموعه‌ی داخلی fallback می‌کند. با unload شدن پلاگین، contributionهایش خودکار حذف می‌شوند.' },
+                { type: 'note', variant: 'tip', text: 'برای استفاده از آرت‌ورک داخلی، یک مپ را به هر نام ایکون موجود اشاره بده (مثلاً `file_type_kotlin`). SVGهای خودت را فقط برای ایکون‌هایی که در مجموعه‌ی داخلی نیستند زیر `asset_dir` بگذار.' }
+            ]
+        },
+
+        'toolbar-icon': {
+            title: 'نوار ابزار (Toolbar Icon)',
+            filename: 'PluginIcons.java',
+            module: 'ide-ui-api',
+            dek: 'یک اکشن دائمی که کنار ایکون‌های خود IDE پین می‌شود — با یک لمس پنل‌ات اجرا می‌شود، بدون پاپ‌آپ.',
+            blocks: [
+                { type: 'p', text: '`PluginIcons.setPluginShowState(context, state, title, onClick, icon)` یک `PluginToolbarIcon` در `PluginUiExtensionPoints.TOOLBAR_ICON` برایت ثبت می‌کند. `PluginIconState.Editor` آن را به نوار ابزار **ادیتور** و `PluginIconState.FileES` به نوار ابزار **فایل‌منیجر** پین می‌کند. ایکون می‌تواند یک منبع (`R.drawable.*`) باشد یا یک drawable ساخته‌شده از assetهای پلاگین (مثلاً `BitmapDrawable` از یک PNG).' },
+                { type: 'code', filename: 'PluginIcons.java', lang: 'java', code:
+`public final class PluginIcons {
+
+  public static Disposable setPluginShowState(
+      PluginContext context, PluginIconState state,
+      String title, View.OnClickListener onClick, Drawable icon) {
+
+    String pluginId = context.getDescriptor().getId();
+    String resolvedId = pluginId + "#" + state.name();
+
+    PluginToolbarIcon toolbarIcon = new PluginToolbarIcon() {
+      @Override public String getId()    { return resolvedId; }
+      @Override public String getTitle() { return title; }
+      @Override public PluginIconState getState() { return state; }
+      @Override public Drawable getIcon() { return icon; }
+      @Override public void onClick(View anchor) { onClick.onClick(anchor); }
+    };
+
+    Disposable registration =
+        context.getExtensions().register(
+            PluginUiExtensionPoints.TOOLBAR_ICON, toolbarIcon);
+    context.registerDisposable(registration);
+    return registration;
+  }
+}` },
+                { type: 'h2', text: 'اجرای پنل از روی ایکون' },
+                { type: 'p', text: 'یک لمس روی ایکون دقیقاً مثل لمس پلاگین در پاپ‌آپ است، فقط پاپ‌آپ باز نمی‌شود. سرویس `PanelHostService` هاست (`IdeHostServices.PANEL_HOST`) را بگیر و `showPanel(yourPanel)` را صدا بزن؛ هاست پنل را در حالت نمایش ثبت‌شده‌اش (side sheet، دیالوگ، پنجره‌ی شناور، ...) رندر می‌کند.' },
+                { type: 'code', filename: 'MyPlugin.java', lang: 'java', code:
+`Context android =
+    context.getServices().require(IdeHostServices.PLUGIN_ANDROID_CONTEXT);
+Drawable icon = android.getDrawable(R.drawable.ic_my_tool);
+
+context.getExtensions().register(
+    PluginUiExtensionPoints.TOOLBAR_ICON,
+    new ToolbarIcon(
+        "my.tool",
+        PluginIconState.Editor,
+        "My Tool",
+        icon,
+        v -> {
+          PanelHostService panelHost =
+              context.getServices().get(IdeHostServices.PANEL_HOST);
+          if (panelHost != null) panelHost.showPanel(myPanel);
+        }));` },
+                { type: 'note', variant: 'tip', text: 'چند ایکون از یک پلاگین مشکلی ندارد: پارامتر `itemId` در api (یا idهای خودِ `PluginToolbarIcon`) هرکدام را یکتا نگه می‌دارد تا لمس‌ها همیشه به اکشن درست برسند. با unload پلاگین، ایکون‌هایش خودکار حذف می‌شوند.' }
+            ]
+        },
+
+        'file-click-handler': {
+            title: 'FileClickHandler',
+            filename: 'FileClickHandler.java',
+            module: 'ide-ui-api',
+            dek: 'تصاحب یک تک‌ضربه روی فایل در فایل‌منیجر و نمایش رابط خودت — عالی برای فرمت‌های خودت (SVG → PNG، آرشیوها، فایل‌های پروژه‌ی سفارشی).',
+            blocks: [
+                { type: 'p', text: '`FileClickHandler` را پیاده کن و در `PluginUiExtensionPoints.FILE_CLICK_HANDLER` ثبتش کن. برای هر ضربه در فایل‌منیجر، هاست به ترتیب نزولی اولویت از هر هندلر `supports(path, name, isDirectory)` می‌پرسد؛ اولین هندلری که `true` برگرداند برنده است، یک `FileClickContext` می‌گیرد، و باز شدن داخلی (ادیتور، نمایش تصویر/صدا، نصب apk، ...) برای آن ضربه **skip** می‌شود. برگرداندن `false` — یا ثبت‌نکردن — رفتار خودِ IDE را دست‌نخورده می‌گذارد.' },
+                {
+                    type: 'code', filename: 'FileClickHandler.java', lang: 'java', code:
+                        `public interface FileClickHandler {
+
+  boolean supports(String path, String name, boolean isDirectory);
+
+  void onFileClick(FileClickContext context);
+}`
+                },
+                { type: 'h2', text: 'چی به دستت می‌آید: FileClickContext' },
+                {
+                    type: 'table', headers: ['دسترسی', 'معنی'], rows: [
+                        ['`context()`', 'Context میزبان؛ برای نمایش دیالوگ یا شروع Activity.'],
+                        ['`path()`', 'مسیر مطلق فایل یا پوشه‌ی لمس‌شده.'],
+                        ['`name()`', 'نام نمایشی آیتم لمس‌شده.'],
+                        ['`file()`', 'مسیر لمس‌شده به‌صورت `java.io.File`.'],
+                        ['`isDirectory()`', 'اگر آیتم لمس‌شده پوشه باشد `true`.'],
+                        ['`anchor()`', 'ویوی ردیف لمس‌شده، برای shared element یا لنگر پاپ‌آپ (ممکن است `null` باشد).']
+                    ]
+                },
+                { type: 'h2', text: 'مثال: SVG → PNG' },
+                {
+                    type: 'code', filename: 'SvgHandler.java', lang: 'java', code:
+                        `public final class SvgHandler implements FileClickHandler {
+
+  private final UiFeedbackHost ui;
+
+  public SvgHandler(PluginContext context) {
+    ui = context.getServices().require(IdeHostServices.UI_FEEDBACK);
+  }
+
+  @Override
+  public boolean supports(String path, String name, boolean isDirectory) {
+    return !isDirectory && name.toLowerCase().endsWith(".svg");
+  }
+
+  @Override
+  public void onFileClick(FileClickContext context) {
+    ui.confirm(
+        "تبدیل به PNG؟",
+        context.path(),
+        ok -> {
+          if (ok) convert(context.file());
+        });
+  }
+}`
+                },
+                {
+                    type: 'code', filename: 'MyPlugin.java', lang: 'java', code:
+                        `public void activate(PluginContext context) {
+  context.registerDisposable(
+      context.getExtensions().register(
+          PluginUiExtensionPoints.FILE_CLICK_HANDLER,
+          new SvgHandler(context)));
+}`
+                },
+                { type: 'note', variant: 'warn', text: '`supports` را سریع نگه دار: روی ترد اصلی برای هر ضربه اجرا می‌شود، پس با همان `path` / `name` / `isDirectory` تصمیم بگیر و **هیچ** I/O دیسکی آنجا انجام نده. کار اصلی را داخل `onFileClick` انجام بده و هر چیز سنگین را به ترد پس‌زمینه ببر.' },
+                { type: 'note', variant: 'info', text: 'هندلری که در `onFileClick` exception بیندازد skip می‌شود و ضربه به جریان داخلی می‌رسد، پس یک پلاگین خراب هرگز نمی‌تواند فایل‌منیجر را قفل کند. با unload شدن پلاگین، contribution خودکار حذف می‌شود.' }
             ]
         },
 
@@ -1361,7 +1488,7 @@ ui.promptInput("اسم پروژه", "my-app", name -> {
                         ['`entryClass`', 'رشته', 'اجباری — نام کامل کلاسِ پیاده‌کننده‌ی `GhostPlugin`، با سازنده‌ی بدون‌آرگومان و public.'],
                         ['`description`', 'رشته', 'اختیاری؛ پیش‌فرض رشته‌ی خالی.'],
                         ['`minHostVersion`', 'عدد صحیح', 'اختیاری؛ پیش‌فرض `۰`. کمترین versionCode اپ میزبان که این پلاگین را پشتیبانی می‌کند.'],
-                        ['`icon`', 'رشته', 'اختیاری؛ نام یک فایل PNG/JPG داخل `assets/` (همان پوشه‌ی `plugin.json`). اگر نباشد، پلاگین آیکن ندارد.']
+                        ['`icon`', 'رشته', 'اختیاری؛ نام یک فایل PNG/JPG داخل `assets/` (همان پوشه‌ی `plugin.json`). اگر نباشد، پلاگین ایکون ندارد.']
                     ]
                 },
                 {
