@@ -38,6 +38,7 @@ var CONTENT_EN = {
       'editor-host': 'EditorHost',
       'file-manager-host': 'FileManagerHost',
       'code-runner-host': 'CodeRunnerHost',
+      'sync-host': 'SyncHost / SyncSession',
       'editor-panel': 'EditorPanel',
       'file-panel': 'FilePanel',
       'editor-action-handler': 'EditorActionHandler',
@@ -791,7 +792,7 @@ public interface LspServerConnectionFactory {
       blocks: [
         { type: 'p', text: '`ide-ui-api` is an Android library (namespace: `ir.hanzodev1375.ghostide.ide.ui.api`, `minSdk 26`, `compileSdk 36`) that builds on `plugin-api` and `androidx.appcompat`.' },
         { type: 'note', variant: 'info', text: 'Android doesn\u2019t let dynamically loaded code declare a new `<activity>` in the host\u2019s manifest. That\u2019s why a plugin\u2019s \u201cscreen\u201d is actually a `Fragment`, not an Activity \u2014 the same technique Android plugin frameworks commonly use. The host app has a single screen-hosting Activity that displays this Fragment.' },
-        { type: 'p', text: 'To add a screen, see the [PluginScreen](#/ui/plugin-screen) interface. To slide a panel inside the running editor, see [EditorPanel](#/ui/editor-panel); to slide one inside the file manager, see [FilePanel](#/ui/file-panel). To reach the open editor or file manager, see [EditorHost](#/ui/editor-host) and [FileManagerHost](#/ui/file-manager-host). To run code or a shell command, see [CodeRunnerHost](#/ui/code-runner-host). To intercept your language server\u2019s commands locally, see [EditorActionHandler](#/ui/editor-action-handler). To pin an action to a toolbar or to take over a file tap with your own format, see [Toolbar Icon](#/ui/toolbar-icon) and [FileClickHandler](#/ui/file-click-handler).' }
+        { type: 'p', text: 'To add a screen, see the [PluginScreen](#/ui/plugin-screen) interface. To slide a panel inside the running editor, see [EditorPanel](#/ui/editor-panel); to slide one inside the file manager, see [FilePanel](#/ui/file-panel). To reach the open editor or file manager, see [EditorHost](#/ui/editor-host) and [FileManagerHost](#/ui/file-manager-host). To run code or a shell command, see [CodeRunnerHost](#/ui/code-runner-host). To intercept your language server\u2019s commands locally, see [EditorActionHandler](#/ui/editor-action-handler). To pin an action to a toolbar or to take over a file tap with your own format, see [Toolbar Icon](#/ui/toolbar-icon) and [FileClickHandler](#/ui/file-click-handler). To install project dependencies behind the editor\u2019s sync bar instead of the terminal, see [SyncHost / SyncSession](#/ui/sync-host).' }
       ]
     },
 
@@ -818,6 +819,9 @@ public interface LspServerConnectionFactory {
 
   public static final ServiceKey<ProotProcessLauncher> PROOT_PROCESS_LAUNCHER =
       new ServiceKey<>("ir.hanzodev1375.ghostide.ui.prootProcessLauncher", ProotProcessLauncher.class);
+
+  public static final ServiceKey<SyncHost> SYNC_HOST =
+      new ServiceKey<>("ir.hanzodev1375.ghostide.ui.syncHost", SyncHost.class);
 }` },
         { type: 'h2', text: 'PLUGIN_ANDROID_CONTEXT' },
         { type: 'p', text: 'A `Context` scoped to the plugin itself, not to the host Activity. To inflate a `PluginScreen`\u2019s layout you must go through this Context, not the host Activity\u2019s default inflater \u2014 otherwise the plugin\u2019s own `R.layout` ids won\u2019t resolve.' },
@@ -827,7 +831,9 @@ LayoutInflater.from(pluginContext)
     .cloneInContext(pluginContext)
     .inflate(R.layout.my_screen, container, false);` },
         { type: 'h2', text: 'CODE_RUNNER_HOST' },
-        { type: 'p', text: 'The service a plugin asks for when it wants to run code or a shell command \u2014 see [CodeRunnerHost](#/ui/code-runner-host).' }
+        { type: 'p', text: 'The service a plugin asks for when it wants to run code or a shell command \u2014 see [CodeRunnerHost](#/ui/code-runner-host).' },
+        { type: 'h2', text: 'SYNC_HOST' },
+        { type: 'p', text: 'The service a plugin asks for when it needs to install or refresh project dependencies: it shows the editor\u2019s sync bar instead of the terminal \u2014 see [SyncHost / SyncSession](#/ui/sync-host).' }
       ]
     },
 
@@ -957,6 +963,65 @@ if (result.success()) {
   ui.toast("git failed: " + result.exitCode());
 }` },
         { type: 'note', variant: 'warn', text: '`exec()` runs in the app\u2019s own shell environment, which is not necessarily identical to the interactive terminal session. Binaries living inside the proot rootfs should go through [ProotProcessLauncher](#/ui/ui-overview) instead.' }
+      ]
+    },
+
+    'sync-host': {
+      title: 'SyncHost / SyncSession',
+      filename: 'SyncHost.java',
+      module: 'ide-ui-api',
+      dek: 'Drives the editor\u2019s Android-Studio-style sync bar, so dependency installs surface as a sync instead of being buried in a terminal.',
+      blocks: [
+        { type: 'p', text: 'Registered by the host under `IdeHostServices.SYNC_HOST`. Call `begin(...)` to show the sync bar under the editor tabs, then report progress through the returned `SyncSession`. Use it for dependency installs (Gradle, npm, pip, ...) instead of `CodeRunnerHost.runShell`, so the work is visible without the user opening the terminal.' },
+        { type: 'code', filename: 'SyncHost.java', lang: 'java', code:
+`public interface SyncHost {
+
+  // Must be called on the UI thread.
+  SyncSession begin(CharSequence title);
+}` },
+        { type: 'code', filename: 'SyncSession.java', lang: 'java', code:
+`public interface SyncSession {
+
+  void setTitle(CharSequence title);
+
+  void setMessage(CharSequence message);
+
+  void setProgress(int percent);   // 0..100; negative switches to indeterminate
+
+  void succeed();                  // hides the bar + reloads language servers
+
+  void fail(CharSequence reason);  // hides the bar + reloads language servers
+
+  void cancel();                   // hides the bar, no LSP reload
+
+  boolean isActive();
+}` },
+        { type: 'table', headers: ['Member', 'Description'], rows: [
+          ['`begin(title)`', 'Starts a session and shows the bar. One session per editor: starting another cancels the previous one. UI thread only.'],
+          ['`setTitle(title)`', 'Replaces the headline shown on the bar.'],
+          ['`setMessage(message)`', 'Sets the small status line / current step, e.g. the package being fetched.'],
+          ['`setProgress(percent)`', 'Determinate `0..100`; a negative value switches back to the indeterminate spinner.'],
+          ['`succeed()`', 'Marks the sync successful: hides the bar and reloads the language servers.'],
+          ['`fail(reason)`', 'Marks the sync failed: hides the bar and reloads the language servers.'],
+          ['`cancel()`', 'Aborts the session without reloading the language servers.'],
+          ['`isActive()`', '`true` until the session has finished or been cancelled.']
+        ] },
+        { type: 'code', filename: 'SyncDependencies.java', lang: 'java', code:
+`SyncHost sync = context.getServices().require(IdeHostServices.SYNC_HOST);
+SyncSession session = sync.begin("npm install");
+session.setProgress(-1);
+
+new Thread(() -> {
+  try {
+    // ... run the package manager, e.g. via ProotProcessLauncher ...
+    session.setMessage("Downloading dependencies");
+    session.setProgress(100);
+    session.succeed();
+  } catch (Exception e) {
+    session.fail(e.getMessage());
+  }
+}).start();` },
+        { type: 'note', variant: 'info', text: 'Reporting is safe from any thread; only `begin(...)` must run on the UI thread. `succeed()`/`fail(...)` reload the language servers so newly installed libraries become visible to completion and navigation.' }
       ]
     },
 

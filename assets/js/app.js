@@ -135,7 +135,9 @@
 
     function renderNote(block) {
         var variant = block.variant || 'info';
-        return '<div class="note ' + variant + '">' + ICONS[variant] + '<div>' + inline(block.text) + '</div></div>';
+        return '<div class="note ' + variant + '">' +
+            '<span class="note__emblem" data-variant="' + variant + '">' + ICONS[variant] + '</span>' +
+            '<div>' + inline(block.text) + '</div></div>';
     }
 
     function renderTable(block) {
@@ -231,9 +233,11 @@
         var h = CONTENT[lang].home;
         state.codeRegistry = [];
         document.title = h.title.replace(/\*\*/g, '') + ' · Ghost IDE Plugin Docs';
-        var mockLines = h.mock.lines.map(function(l) { return escapeHtml(l); });
-        var mockHtml = mockLines.join('\n');
-        var gutter = mockLines.map(function(_, i) { return '<div>' + (i + 1) + '</div>'; }).join('');
+        var mockRaw = h.mock.lines.join('\n');
+        var mockHtml = (window.Prism && Prism.languages.java)
+            ? Prism.highlight(mockRaw, Prism.languages.java, 'java')
+            : escapeHtml(mockRaw);
+        var gutter = h.mock.lines.map(function(_, i) { return '<div>' + (i + 1) + '</div>'; }).join('');
         var cards = h.cards.map(function(card) {
             return '<a class="homecard" href="#/' + card.group + '/' + card.slug + '">' +
                 '<div class="homecard__icon">' + ICONS[card.icon] + '</div>' +
@@ -249,7 +253,7 @@
         html += '<div class="hero__stats">' + h.stats.map(function(s) { return '<div><b>' + escapeHtml(s.value) + '</b><span>' + escapeHtml(s.label) + '</span></div>'; }).join('') + '</div>';
         html += '</div>';
         html += '<div class="mockwin"><div class="mockwin__tabs"><div class="mockwin__tab is-active"><span class="dot"></span>' + escapeHtml(h.mock.filename) + '</div></div>';
-        html += '<div class="mockwin__body"><div class="mockwin__gutter">' + gutter + '</div><div class="mockwin__code">' + mockHtml + '<span class="mockwin__cursor"></span></div></div></div>';
+        html += '<div class="mockwin__body"><div class="mockwin__gutter">' + gutter + '</div><pre class="mockwin__code"><code class="language-java">' + mockHtml + '</code></pre></div></div>';
         html += '</section>';
         html += '<div class="homegrid">' + cards + '</div>';
         html += '</div>';

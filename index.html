@@ -14,8 +14,20 @@
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
+<script>
+  /* applied before first paint so the saved theme never flashes */
+  (function () {
+    try {
+      var t = localStorage.getItem('ghostide-docs-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {
+		  console.log(e)
+		}
+  })();
+</script>
 </head>
 <body dir="rtl">
+<canvas id="bg3d" aria-hidden="true"></canvas>
 <a href="#mainContent" class="skip-link">رفتن به محتوا</a>
 
 <header class="topbar">
@@ -35,11 +47,14 @@
   </div>
 
   <div class="topbar__actions">
+    <button type="button" class="icon-btn" id="themeBtn" aria-haspopup="dialog" aria-label="Theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.9 1.2-1.9-.5-.9.1-1.9 1.2-1.9H16a5 5 0 0 0 5-5c0-4.9-4-9.2-9-9.2Z"/><circle cx="7.6" cy="11.4" r="1.05" fill="currentColor" stroke="none"/><circle cx="10.4" cy="7.7" r="1.05" fill="currentColor" stroke="none"/><circle cx="15" cy="8.6" r="1.05" fill="currentColor" stroke="none"/></svg>
+    </button>
     <div class="langswitch">
       <button type="button" id="langFa">FA</button>
       <button type="button" id="langEn">EN</button>
     </div>
-    <a class="icon-btn" id="githubLink" href="https://github.com/hanzodev1375" target="_blank" rel="noopener" aria-label="GitHub">
+    <a class="icon-btn" id="githubLink" href="https://github.com/hanzodev30" target="_blank" rel="noopener" aria-label="GitHub">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/><path d="M14 4h6v6"/><path d="M20 4 10.5 13.5"/></svg>
     </a>
   </div>
@@ -59,8 +74,19 @@
 </div>
 
 <footer class="sitefoot">
-  Ghost IDE Plugin Docs — <a href="https://github.com/hanzodev1375" target="_blank" rel="noopener">GitHub</a>
+  Ghost IDE Plugin Docs — <a href="https://github.com/hanzodev30" target="_blank" rel="noopener">GitHub</a>
 </footer>
+
+<dialog class="themedlg" id="themeDialog" aria-labelledby="themeDialogTitle">
+  <div class="themedlg__head">
+    <h2 id="themeDialogTitle">Theme</h2>
+    <button type="button" class="themedlg__close" id="themeClose" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+  </div>
+  <p class="themedlg__dek" id="themeDek"></p>
+  <div class="themedlg__grid" id="themeGrid"></div>
+</dialog>
 
 <script src="assets/js/nav.js"></script>
 <script src="assets/js/content.fa.js"></script>
@@ -91,5 +117,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-groovy.min.js"></script>
 <script src="assets/js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+<script src="assets/js/theme.js" defer></script>
+<script src="assets/js/bg3d.js" defer></script>
+<script src="assets/js/panels3d.js" defer></script>
+<script src="assets/js/emblems3d.js" defer></script>
 </body>
 </html>

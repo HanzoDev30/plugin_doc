@@ -4,7 +4,7 @@
 
 - Repository: https://github.com/HanzoDev1375/GhostIdes
 - Version: plugin-api 0.1.0
-- Pages: 55
+- Pages: 56
 - Generated from the real module source (no build step).
 
 # فهرست مطالب
@@ -47,6 +47,7 @@
 - EditorHost — `editor-host` (ide-ui-api)
 - FileManagerHost — `file-manager-host` (ide-ui-api)
 - CodeRunnerHost — `code-runner-host` (ide-ui-api)
+- SyncHost / SyncSession — `sync-host` (ide-ui-api)
 - EditorPanel — `editor-panel` (ide-ui-api)
 - FilePanel — `file-panel` (ide-ui-api)
 - EditorActionHandler — `editor-action-handler` (ide-ui-api)
@@ -885,7 +886,7 @@ public record LspServerRequest(File projectRoot, File file) {
 
 > **[INFO]** اندروید اجازه نمی‌دهد کد بارگذاری‌شده در زمان اجرا یک `<activity>` تازه در مانیفست میزبان اعلام کند. به همین دلیل "صفحه" یک پلاگین در واقع یک `Fragment` است، نه یک Activity — همان تکنیکی که چارچوب‌های پلاگین اندرویدی معمولاً استفاده می‌کنند. اپ میزبان یک اکتیویتی میزبان‌کننده‌ی صفحه دارد که این Fragment را نمایش می‌دهد.
 
-برای افزودن یک صفحه، رابط PluginScreen را ببین. برای بازکردن پنل داخل ادیتورِ در حال اجرا، EditorPanel را ببین؛ برای بازکردن پنل داخل فایل‌منیجر، FilePanel را ببین. برای دسترسی به ادیتور یا فایل‌منیجر باز، رابط‌های EditorHost و FileManagerHost را ببین. برای اجرای کد یا دستور شل، CodeRunnerHost را ببین. برای هندل محلی دستورهای سرور زبان، EditorActionHandler را ببین. برای پین کردن یک اکشن روی نوار ابزار یا تصاحب لمس یک فایل با فرمت خودت، Toolbar Icon و FileClickHandler را ببین.
+برای افزودن یک صفحه، رابط PluginScreen را ببین. برای بازکردن پنل داخل ادیتورِ در حال اجرا، EditorPanel را ببین؛ برای بازکردن پنل داخل فایل‌منیجر، FilePanel را ببین. برای دسترسی به ادیتور یا فایل‌منیجر باز، رابط‌های EditorHost و FileManagerHost را ببین. برای اجرای کد یا دستور شل، CodeRunnerHost را ببین. برای هندل محلی دستورهای سرور زبان، EditorActionHandler را ببین. برای پین کردن یک اکشن روی نوار ابزار یا تصاحب لمس یک فایل با فرمت خودت، Toolbar Icon و FileClickHandler را ببین. برای نصب وابستگی‌های پروژه پشت نوار sync ادیتور به‌جای ترمینال، SyncHost / SyncSession را ببین.
 
 
 ---
@@ -912,6 +913,9 @@ public final class IdeHostServices {
 
   public static final ServiceKey<ProotProcessLauncher> PROOT_PROCESS_LAUNCHER =
       new ServiceKey<>("ir.hanzodev1375.ghostide.ui.prootProcessLauncher", ProotProcessLauncher.class);
+
+  public static final ServiceKey<SyncHost> SYNC_HOST =
+      new ServiceKey<>("ir.hanzodev1375.ghostide.ui.syncHost", SyncHost.class);
 }
 ```
 
@@ -929,6 +933,10 @@ LayoutInflater.from(pluginContext)
 ## CODE_RUNNER_HOST
 
 سرویسی که پلاگین وقتی می‌خواهد کدی یا دستوری را اجرا کند از آن استفاده می‌کند — CodeRunnerHost را ببین.
+
+## SYNC_HOST
+
+سرویسی که پلاگین وقتی می‌خواهد وابستگی‌های پروژه را نصب یا به‌روزرسانی کند از آن استفاده می‌کند: به‌جای ترمینال، نوار sync ادیتور را نشان می‌دهد — SyncHost / SyncSession را ببین.
 
 
 ---
@@ -1080,6 +1088,73 @@ if (result.success()) {
 ```
 
 > **[WARN]** `exec()` در محیط شل خودِ اپ اجرا می‌شود که لزوماً با سشن ترمینال تعاملی یکی نیست. باینری‌های داخل rootfs پرووت باید از ProotProcessLauncher بروند.
+
+
+---
+
+# SyncHost / SyncSession
+> گروه: رابط کاربری · فایل: SyncHost.java · ماژول: ide-ui-api
+
+نوار همگام‌سازی سبک Android Studio در ادیتور را هدایت می‌کند، تا نصب وابستگی‌ها به‌جای گم‌شدن در ترمینال به‌شکل یک sync دیده شود.
+
+میزبان این سرویس را زیر `IdeHostServices.SYNC_HOST` ثبت می‌کند. برای نمایش نوار sync زیر تب‌های ادیتور `begin(...)` را صدا بزن و سپس از طریق `SyncSession` برگشتی پیشرفت را گزارش بده. برای نصب وابستگی‌ها (Gradle، npm، pip و ...) به‌جای `CodeRunnerHost.runShell` از این استفاده کن تا کار بدون باز کردن ترمینال توسط کاربر دیده شود.
+
+```java — SyncHost.java
+public interface SyncHost {
+
+  // باید روی ترد UI صدا زده شود.
+  SyncSession begin(CharSequence title);
+}
+```
+
+```java — SyncSession.java
+public interface SyncSession {
+
+  void setTitle(CharSequence title);
+
+  void setMessage(CharSequence message);
+
+  void setProgress(int percent);   // 0..100؛ مقدار منفی = نامعین
+
+  void succeed();                  // نوار را پنهان و سرورهای زبان را دوباره بارگذاری می‌کند
+
+  void fail(CharSequence reason);  // نوار را پنهان و سرورهای زبان را دوباره بارگذاری می‌کند
+
+  void cancel();                   // نوار را پنهان می‌کند، بدون بارگذاری دوباره LSP
+
+  boolean isActive();
+}
+```
+
+| عضو | توضیح |
+| --- | --- |
+| `begin(title)` | یک سشن را شروع و نوار را نشان می‌دهد. در هر ادیتور فقط یک سشن: شروع سشن بعدی، قبلی را لغو می‌کند. فقط ترد UI. |
+| `setTitle(title)` | عنوان نمایش‌داده‌شده روی نوار را عوض می‌کند. |
+| `setMessage(message)` | خط وضعیت کوچک / مرحله‌ی جاری، مثلاً بسته‌ای که در حال دریافت است. |
+| `setProgress(percent)` | مقدار معین `0..100`؛ مقدار منفی به اسپینر نامعین برمی‌گردد. |
+| `succeed()` | sync را موفق علامت می‌زند: نوار را پنهان و سرورهای زبان را دوباره بارگذاری می‌کند. |
+| `fail(reason)` | sync را ناموفق علامت می‌زند: نوار را پنهان و سرورهای زبان را دوباره بارگذاری می‌کند. |
+| `cancel()` | سشن را بدون بارگذاری دوباره‌ی سرورهای زبان لغو می‌کند. |
+| `isActive()` | تا وقتی سشن تمام یا لغو نشده باشد `true` است. |
+
+```java — SyncDependencies.java
+SyncHost sync = context.getServices().require(IdeHostServices.SYNC_HOST);
+SyncSession session = sync.begin("npm install");
+session.setProgress(-1);
+
+new Thread(() -> {
+  try {
+    // ... اجرای پکیج‌منیجر، مثلاً با ProotProcessLauncher ...
+    session.setMessage("Downloading dependencies");
+    session.setProgress(100);
+    session.succeed();
+  } catch (Exception e) {
+    session.fail(e.getMessage());
+  }
+}).start();
+```
+
+> **[INFO]** گزارش‌دادن از هر تردی امن است؛ فقط `begin(...)` باید روی ترد UI اجرا شود. `succeed()`/`fail(...)` سرورهای زبان را دوباره بارگذاری می‌کنند تا کتابخانه‌های تازه‌نصب‌شده در تکمیل خودکار و ناوبری دیده شوند.
 
 
 ---

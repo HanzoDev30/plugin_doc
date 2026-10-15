@@ -4,7 +4,7 @@ Developer documentation for building Ghost IDE plugins — the three-module API 
 
 - Repository: https://github.com/HanzoDev1375/GhostIdes
 - Version: plugin-api 0.1.0
-- Pages: 55
+- Pages: 56
 - Generated from the real module source (no build step).
 
 # Table of contents
@@ -47,6 +47,7 @@ Developer documentation for building Ghost IDE plugins — the three-module API 
 - EditorHost — `editor-host` (ide-ui-api)
 - FileManagerHost — `file-manager-host` (ide-ui-api)
 - CodeRunnerHost — `code-runner-host` (ide-ui-api)
+- SyncHost / SyncSession — `sync-host` (ide-ui-api)
 - EditorPanel — `editor-panel` (ide-ui-api)
 - FilePanel — `file-panel` (ide-ui-api)
 - EditorActionHandler — `editor-action-handler` (ide-ui-api)
@@ -885,7 +886,7 @@ The extension point and services for adding UI and reaching the host.
 
 > **[INFO]** Android doesn’t let dynamically loaded code declare a new `<activity>` in the host’s manifest. That’s why a plugin’s “screen” is actually a `Fragment`, not an Activity — the same technique Android plugin frameworks commonly use. The host app has a single screen-hosting Activity that displays this Fragment.
 
-To add a screen, see the PluginScreen interface. To slide a panel inside the running editor, see EditorPanel; to slide one inside the file manager, see FilePanel. To reach the open editor or file manager, see EditorHost and FileManagerHost. To run code or a shell command, see CodeRunnerHost. To intercept your language server’s commands locally, see EditorActionHandler. To pin an action to a toolbar or to take over a file tap with your own format, see Toolbar Icon and FileClickHandler.
+To add a screen, see the PluginScreen interface. To slide a panel inside the running editor, see EditorPanel; to slide one inside the file manager, see FilePanel. To reach the open editor or file manager, see EditorHost and FileManagerHost. To run code or a shell command, see CodeRunnerHost. To intercept your language server’s commands locally, see EditorActionHandler. To pin an action to a toolbar or to take over a file tap with your own format, see Toolbar Icon and FileClickHandler. To install project dependencies behind the editor’s sync bar instead of the terminal, see SyncHost / SyncSession.
 
 
 ---
@@ -912,6 +913,9 @@ public final class IdeHostServices {
 
   public static final ServiceKey<ProotProcessLauncher> PROOT_PROCESS_LAUNCHER =
       new ServiceKey<>("ir.hanzodev1375.ghostide.ui.prootProcessLauncher", ProotProcessLauncher.class);
+
+  public static final ServiceKey<SyncHost> SYNC_HOST =
+      new ServiceKey<>("ir.hanzodev1375.ghostide.ui.syncHost", SyncHost.class);
 }
 ```
 
@@ -929,6 +933,10 @@ LayoutInflater.from(pluginContext)
 ## CODE_RUNNER_HOST
 
 The service a plugin asks for when it wants to run code or a shell command — see CodeRunnerHost.
+
+## SYNC_HOST
+
+The service a plugin asks for when it needs to install or refresh project dependencies: it shows the editor’s sync bar instead of the terminal — see SyncHost / SyncSession.
 
 
 ---
@@ -1080,6 +1088,73 @@ if (result.success()) {
 ```
 
 > **[WARN]** `exec()` runs in the app’s own shell environment, which is not necessarily identical to the interactive terminal session. Binaries living inside the proot rootfs should go through ProotProcessLauncher instead.
+
+
+---
+
+# SyncHost / SyncSession
+> Group: UI Integration · File: SyncHost.java · Module: ide-ui-api
+
+Drives the editor’s Android-Studio-style sync bar, so dependency installs surface as a sync instead of being buried in a terminal.
+
+Registered by the host under `IdeHostServices.SYNC_HOST`. Call `begin(...)` to show the sync bar under the editor tabs, then report progress through the returned `SyncSession`. Use it for dependency installs (Gradle, npm, pip, ...) instead of `CodeRunnerHost.runShell`, so the work is visible without the user opening the terminal.
+
+```java — SyncHost.java
+public interface SyncHost {
+
+  // Must be called on the UI thread.
+  SyncSession begin(CharSequence title);
+}
+```
+
+```java — SyncSession.java
+public interface SyncSession {
+
+  void setTitle(CharSequence title);
+
+  void setMessage(CharSequence message);
+
+  void setProgress(int percent);   // 0..100; negative switches to indeterminate
+
+  void succeed();                  // hides the bar + reloads language servers
+
+  void fail(CharSequence reason);  // hides the bar + reloads language servers
+
+  void cancel();                   // hides the bar, no LSP reload
+
+  boolean isActive();
+}
+```
+
+| Member | Description |
+| --- | --- |
+| `begin(title)` | Starts a session and shows the bar. One session per editor: starting another cancels the previous one. UI thread only. |
+| `setTitle(title)` | Replaces the headline shown on the bar. |
+| `setMessage(message)` | Sets the small status line / current step, e.g. the package being fetched. |
+| `setProgress(percent)` | Determinate `0..100`; a negative value switches back to the indeterminate spinner. |
+| `succeed()` | Marks the sync successful: hides the bar and reloads the language servers. |
+| `fail(reason)` | Marks the sync failed: hides the bar and reloads the language servers. |
+| `cancel()` | Aborts the session without reloading the language servers. |
+| `isActive()` | `true` until the session has finished or been cancelled. |
+
+```java — SyncDependencies.java
+SyncHost sync = context.getServices().require(IdeHostServices.SYNC_HOST);
+SyncSession session = sync.begin("npm install");
+session.setProgress(-1);
+
+new Thread(() -> {
+  try {
+    // ... run the package manager, e.g. via ProotProcessLauncher ...
+    session.setMessage("Downloading dependencies");
+    session.setProgress(100);
+    session.succeed();
+  } catch (Exception e) {
+    session.fail(e.getMessage());
+  }
+}).start();
+```
+
+> **[INFO]** Reporting is safe from any thread; only `begin(...)` must run on the UI thread. `succeed()`/`fail(...)` reload the language servers so newly installed libraries become visible to completion and navigation.
 
 
 ---
