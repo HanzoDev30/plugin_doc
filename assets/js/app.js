@@ -2,7 +2,7 @@
     'use strict';
 
     var SITE = {
-        githubUrl: 'https://github.com/HanzoDev1375/GhostIdes',
+        githubUrl: 'https://github.com/HanzoDev30/Ghostide',
         version: 'plugin-api 0.1.0'
     };
 
